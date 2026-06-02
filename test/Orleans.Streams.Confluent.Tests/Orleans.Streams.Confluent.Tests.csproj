@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Orleans.Streams.Confluent.Aspire\Orleans.Streams.Confluent.Aspire.csproj" />
     <ProjectReference Include="..\..\src\Orleans.Streams.Confluent\Orleans.Streams.Confluent.csproj" />
   </ItemGroup>
 </Project>
