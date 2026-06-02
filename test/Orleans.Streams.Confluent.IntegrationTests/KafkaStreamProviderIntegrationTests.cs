@@ -144,7 +144,7 @@ public sealed class KafkaStreamProviderIntegrationTests
     }
 
     [TestMethod]
-    public async Task KafkaQueueAdapterReceiver_WhenShutdown_GetQueueMessagesAsyncReturnsEmpty()
+    public async Task KafkaQueueAdapterReceiver_WhenShutdown_GetQueueMessagesAsync_ReturnsEmpty()
     {
         const int partitionCount = 3;
         var providerName = $"kafka-{Guid.NewGuid():N}";

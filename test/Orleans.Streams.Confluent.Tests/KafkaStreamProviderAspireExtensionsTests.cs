@@ -200,6 +200,38 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
     }
 
     [TestMethod]
+    public void AddKafkaStreamProviderFromConfiguration_WhenProviderScopedSectionValueIsEmpty_UsesFallbackSectionValues()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Orleans:Streams:Kafka:BootstrapServers"] = "legacy-host:9092",
+                ["Orleans:Streams:Kafka:TopicName"] = "legacy-topic",
+                ["Orleans:Streams:Kafka:kafka"] = string.Empty
+            })
+            .Build();
+
+        using var host = new HostBuilder()
+            .UseOrleans(silo =>
+            {
+                silo.UseLocalhostClustering();
+                silo.Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = Guid.NewGuid().ToString("N");
+                    options.ServiceId = Guid.NewGuid().ToString("N");
+                });
+                silo.AddKafkaStreamProviderFromConfiguration(providerName: "kafka", configuration: configuration);
+            })
+            .Build();
+
+        var optionsMonitor = host.Services.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>();
+        var options = optionsMonitor.Get("kafka");
+
+        options.BootstrapServers.Should().Be("legacy-host:9092");
+        options.TopicName.Should().Be("legacy-topic");
+    }
+
+    [TestMethod]
     public void AddKafkaStreamProviderFromConfiguration_WhenConnectionStringConfigured_BindsConnectionString()
     {
         var configuration = new ConfigurationBuilder()

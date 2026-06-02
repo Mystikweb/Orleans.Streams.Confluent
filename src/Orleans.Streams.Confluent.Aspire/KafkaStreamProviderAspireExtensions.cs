@@ -149,7 +149,7 @@ public static class KafkaStreamProviderAspireExtensions
 
     private static bool SectionHasValues(IConfigurationSection section)
     {
-        return section.Value is not null || section.GetChildren().Any();
+        return !string.IsNullOrWhiteSpace(section.Value) || section.GetChildren().Any();
     }
 
     private static void RegisterKafkaStreamProvider(

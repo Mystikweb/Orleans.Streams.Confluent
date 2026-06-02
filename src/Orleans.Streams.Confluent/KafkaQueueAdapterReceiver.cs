@@ -31,6 +31,23 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         }
         catch (Exception ex)
         {
+            var consumer = _consumer;
+            _consumer = null;
+
+            if (consumer is not null)
+            {
+                try
+                {
+                    consumer.Close();
+                }
+                catch
+                {
+                    // Best effort cleanup path for failed initialization.
+                }
+
+                consumer.Dispose();
+            }
+
             LogErrorReceiverInitializationFailed(queueId, options.TopicName, ex);
             throw;
         }
