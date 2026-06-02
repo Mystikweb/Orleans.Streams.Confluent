@@ -55,10 +55,9 @@ internal sealed partial class KafkaQueueAdapter(
             LogDebugQueueingMessageBatch(streamId, queueId, options.TopicName);
 
             var producerConfig = KafkaClientConfigurationBuilder.CreateProducerConfig(options);
-            var producerConfig = KafkaClientConfigurationBuilder.CreateProducerConfig(options);
 
             using var producer = new ProducerBuilder<Null, byte[]>(producerConfig).Build();
-            var sequenceNumber = token is Orleans.Providers.Streams.Common.EventSequenceTokenV2 eventToken
+            var sequenceNumber = token is Providers.Streams.Common.EventSequenceTokenV2 eventToken
                 ? eventToken.SequenceNumber
                 : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
