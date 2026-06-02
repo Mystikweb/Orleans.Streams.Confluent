@@ -66,9 +66,9 @@ public static class KafkaStreamProviderBuilderExtensions
             configureOptions?.Invoke(options);
         });
 
-        services.AddOptions<HashRingStreamQueueMapperOptions>(providerName).Configure(options =>
+        services.AddOptions<HashRingStreamQueueMapperOptions>(providerName).Configure<IOptionsMonitor<KafkaStreamProviderOptions>>((options, kafkaOptionsMonitor) =>
         {
-            options.TotalQueueCount = partitionCount;
+            options.TotalQueueCount = kafkaOptionsMonitor.Get(providerName).PartitionCount;
         });
     }
 

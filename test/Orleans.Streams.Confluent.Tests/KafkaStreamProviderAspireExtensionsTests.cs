@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Orleans.Configuration;
 using Orleans.Hosting;
+using Orleans.Providers.Streams.Common;
 using Orleans.Streams.Confluent.Aspire;
 
 namespace Orleans.Streams.Confluent.Tests;
@@ -295,5 +296,38 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
         options.PartitionCount.Should().Be(12);
         options.ReplicationFactor.Should().Be(2);
         options.CreateTopicIfMissing.Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void AddKafkaStreamProviderFromConfiguration_WhenConfigurationOverridesPartitionCount_QueueMapperMatchesFinalPartitionCount()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Orleans:Streams:Kafka:BootstrapServers"] = "localhost:9092",
+                ["Orleans:Streams:Kafka:TopicName"] = "orders-topic",
+                ["Orleans:Streams:Kafka:PartitionCount"] = "12",
+                ["Orleans:Streams:Kafka:CreateTopicIfMissing"] = "false"
+            })
+            .Build();
+
+        using var host = new HostBuilder()
+            .UseOrleans(silo =>
+            {
+                silo.UseLocalhostClustering();
+                silo.Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = Guid.NewGuid().ToString("N");
+                    options.ServiceId = Guid.NewGuid().ToString("N");
+                });
+                silo.AddKafkaStreamProviderFromConfiguration(providerName: "kafka", configuration: configuration, partitionCount: 6);
+            })
+            .Build();
+
+        var options = host.Services.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>().Get("kafka");
+        var queueMapperOptions = host.Services.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get("kafka");
+
+        options.PartitionCount.Should().Be(12);
+        queueMapperOptions.TotalQueueCount.Should().Be(12);
     }
 }

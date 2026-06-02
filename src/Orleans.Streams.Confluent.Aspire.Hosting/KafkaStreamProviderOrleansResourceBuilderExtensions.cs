@@ -58,6 +58,7 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
         short? replicationFactor = null,
         bool? createTopicIfMissing = null)
     {
+        ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(kafkaResource);
 
         return service.WithKafkaStreamProvider(

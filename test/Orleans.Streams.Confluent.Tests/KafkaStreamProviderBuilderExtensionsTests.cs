@@ -225,6 +225,38 @@ public sealed class KafkaStreamProviderBuilderExtensionsTests
         queueMapperOptions.TotalQueueCount.Should().Be(6);
     }
 
+    [TestMethod]
+    public void AddKafkaStreamProvider_WhenConfigureOptionsOverridesPartitionCount_QueueMapperMatchesFinalPartitionCount()
+    {
+        using var host = new HostBuilder()
+            .UseOrleans(silo =>
+            {
+                silo.UseLocalhostClustering();
+                silo.Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = Guid.NewGuid().ToString("N");
+                    options.ServiceId = Guid.NewGuid().ToString("N");
+                });
+                silo.AddKafkaStreamProvider(
+                    providerName: "kafka",
+                    configureOptions: options =>
+                    {
+                        options.BootstrapServers = "localhost:9092";
+                        options.TopicName = "orders-topic";
+                        options.PartitionCount = 9;
+                        options.CreateTopicIfMissing = false;
+                    },
+                    partitionCount: 6);
+            })
+            .Build();
+
+        var options = host.Services.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>().Get("kafka");
+        var queueMapperOptions = host.Services.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get("kafka");
+
+        options.PartitionCount.Should().Be(9);
+        queueMapperOptions.TotalQueueCount.Should().Be(9);
+    }
+
     private static KafkaQueueAdapterFactory CreateFactory(IServiceProvider serviceProvider, string providerName)
     {
         var options = serviceProvider.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>().Get(providerName);
