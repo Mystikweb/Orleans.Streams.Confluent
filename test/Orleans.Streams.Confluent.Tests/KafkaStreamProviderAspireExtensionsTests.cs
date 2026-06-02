@@ -15,6 +15,73 @@ namespace Orleans.Streams.Confluent.Tests;
 public sealed class KafkaStreamProviderAspireExtensionsTests
 {
     [TestMethod]
+    public void AddKafkaStreamProviderFromConfiguration_OnSiloBuilder_WhenPartitionCountParameterIsNotPositive_ThrowsArgumentOutOfRangeException()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Orleans:Streams:Kafka:BootstrapServers"] = "localhost:9092",
+                ["Orleans:Streams:Kafka:TopicName"] = "orders-topic"
+            })
+            .Build();
+
+        Action act = () =>
+        {
+            using var _ = new HostBuilder()
+                .UseOrleans(silo =>
+                {
+                    silo.UseLocalhostClustering();
+                    silo.Configure<ClusterOptions>(options =>
+                    {
+                        options.ClusterId = Guid.NewGuid().ToString("N");
+                        options.ServiceId = Guid.NewGuid().ToString("N");
+                    });
+
+                    silo.AddKafkaStreamProviderFromConfiguration(
+                        providerName: "kafka",
+                        configuration: configuration,
+                        partitionCount: 0);
+                })
+                .Build();
+        };
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [TestMethod]
+    public void AddKafkaStreamProviderFromConfiguration_WhenNumericValuesAreNonPositive_BindsValuesWithoutSilentlyIgnoringThem()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Orleans:Streams:Kafka:BootstrapServers"] = "localhost:9092",
+                ["Orleans:Streams:Kafka:TopicName"] = "orders-topic",
+                ["Orleans:Streams:Kafka:PartitionCount"] = "0",
+                ["Orleans:Streams:Kafka:ReplicationFactor"] = "-1"
+            })
+            .Build();
+
+        using var host = new HostBuilder()
+            .UseOrleans(silo =>
+            {
+                silo.UseLocalhostClustering();
+                silo.Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = Guid.NewGuid().ToString("N");
+                    options.ServiceId = Guid.NewGuid().ToString("N");
+                });
+                silo.AddKafkaStreamProviderFromConfiguration(providerName: "kafka", configuration: configuration);
+            })
+            .Build();
+
+        var optionsMonitor = host.Services.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>();
+        var options = optionsMonitor.Get("kafka");
+
+        options.PartitionCount.Should().Be(0);
+        options.ReplicationFactor.Should().Be(-1);
+    }
+
+    [TestMethod]
     public void AddKafkaStreamProviderFromConfiguration_OnSiloBuilder_WhenProviderNameIsWhitespace_ThrowsArgumentException()
     {
         var configuration = new ConfigurationBuilder().Build();

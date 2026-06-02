@@ -24,6 +24,7 @@ public static class KafkaStreamProviderBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(partitionCount, 0);
 
         builder.Services.AddOptions<KafkaStreamProviderOptions>(providerName).Configure(options =>
         {

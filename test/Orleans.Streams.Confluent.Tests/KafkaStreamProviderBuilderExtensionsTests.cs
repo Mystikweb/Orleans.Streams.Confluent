@@ -16,6 +16,36 @@ namespace Orleans.Streams.Confluent.Tests;
 public sealed class KafkaStreamProviderBuilderExtensionsTests
 {
     [TestMethod]
+    public void AddKafkaStreamProvider_WhenPartitionCountParameterIsNotPositive_ThrowsArgumentOutOfRangeException()
+    {
+        Action act = () =>
+        {
+            using var _ = new HostBuilder()
+                .UseOrleans(silo =>
+                {
+                    silo.UseLocalhostClustering();
+                    silo.Configure<ClusterOptions>(options =>
+                    {
+                        options.ClusterId = Guid.NewGuid().ToString("N");
+                        options.ServiceId = Guid.NewGuid().ToString("N");
+                    });
+
+                    silo.AddKafkaStreamProvider(
+                        providerName: "kafka",
+                        configureOptions: options =>
+                        {
+                            options.BootstrapServers = "localhost:9092";
+                            options.TopicName = "orders-topic";
+                        },
+                        partitionCount: 0);
+                })
+                .Build();
+        };
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [TestMethod]
     public void AddKafkaStreamProvider_WhenPartitionCountIsNotPositive_ThrowsArgumentOutOfRangeException()
     {
         using var host = new HostBuilder()

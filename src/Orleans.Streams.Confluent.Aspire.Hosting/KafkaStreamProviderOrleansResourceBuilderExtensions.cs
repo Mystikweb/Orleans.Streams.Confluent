@@ -14,6 +14,10 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
     /// The provider configuration is propagated to silo and client projects via
     /// <see cref="Aspire.Hosting.OrleansServiceExtensions.WithReference{T}" />.
     /// </summary>
+    /// <param name="service">The Orleans service model to configure.</param>
+    /// <param name="providerName">The Orleans stream provider name.</param>
+    /// <param name="options">The Kafka stream provider options to project into Orleans configuration.</param>
+    /// <returns>The updated Orleans service model.</returns>
     public static OrleansService WithKafkaStreamProvider(
         this OrleansService service,
         string providerName,
@@ -37,6 +41,14 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
     /// that exposes a connection string expression. This allows BootstrapServers to be
     /// resolved from AppHost resource wiring instead of a literal value.
     /// </summary>
+    /// <param name="service">The Orleans service model to configure.</param>
+    /// <param name="providerName">The Orleans stream provider name.</param>
+    /// <param name="kafkaResource">The resource builder whose resource exposes a connection string expression.</param>
+    /// <param name="topicName">The Kafka topic name used by the stream provider.</param>
+    /// <param name="partitionCount">Optional Kafka partition count to configure.</param>
+    /// <param name="replicationFactor">Optional Kafka replication factor to configure.</param>
+    /// <param name="createTopicIfMissing">Optional flag controlling whether the topic should be created when missing.</param>
+    /// <returns>The updated Orleans service model.</returns>
     public static OrleansService WithKafkaStreamProvider(
         this OrleansService service,
         string providerName,
@@ -62,6 +74,14 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
     /// connection-string resource. This supports resources added via AddConnectionString and
     /// other integrations that implement <see cref="IResourceWithConnectionString"/>.
     /// </summary>
+    /// <param name="service">The Orleans service model to configure.</param>
+    /// <param name="providerName">The Orleans stream provider name.</param>
+    /// <param name="kafkaResource">The resource that exposes a Kafka connection string expression.</param>
+    /// <param name="topicName">The Kafka topic name used by the stream provider.</param>
+    /// <param name="partitionCount">Optional Kafka partition count to configure.</param>
+    /// <param name="replicationFactor">Optional Kafka replication factor to configure.</param>
+    /// <param name="createTopicIfMissing">Optional flag controlling whether the topic should be created when missing.</param>
+    /// <returns>The updated Orleans service model.</returns>
     public static OrleansService WithKafkaStreamProvider(
         this OrleansService service,
         string providerName,
@@ -91,6 +111,14 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
     /// The provider configuration is propagated to silo and client projects via
     /// <see cref="Aspire.Hosting.OrleansServiceExtensions.WithReference{T}" />.
     /// </summary>
+    /// <param name="service">The Orleans service model to configure.</param>
+    /// <param name="providerName">The Orleans stream provider name.</param>
+    /// <param name="bootstrapServers">The Kafka bootstrap servers value.</param>
+    /// <param name="topicName">The Kafka topic name used by the stream provider.</param>
+    /// <param name="partitionCount">Optional Kafka partition count to configure.</param>
+    /// <param name="replicationFactor">Optional Kafka replication factor to configure.</param>
+    /// <param name="createTopicIfMissing">Optional flag controlling whether the topic should be created when missing.</param>
+    /// <returns>The updated Orleans service model.</returns>
     public static OrleansService WithKafkaStreamProvider(
         this OrleansService service,
         string providerName,
@@ -115,6 +143,14 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
     /// <summary>
     /// Adds a Confluent Kafka stream provider to the Orleans service model using a connection string.
     /// </summary>
+    /// <param name="service">The Orleans service model to configure.</param>
+    /// <param name="providerName">The Orleans stream provider name.</param>
+    /// <param name="connectionString">The Kafka client connection string.</param>
+    /// <param name="topicName">The Kafka topic name used by the stream provider.</param>
+    /// <param name="partitionCount">Optional Kafka partition count to configure.</param>
+    /// <param name="replicationFactor">Optional Kafka replication factor to configure.</param>
+    /// <param name="createTopicIfMissing">Optional flag controlling whether the topic should be created when missing.</param>
+    /// <returns>The updated Orleans service model.</returns>
     public static OrleansService WithKafkaStreamProviderConnectionString(
         this OrleansService service,
         string providerName,

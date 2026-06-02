@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans;
@@ -159,6 +158,8 @@ public static class KafkaStreamProviderAspireExtensions
         Action<KafkaStreamProviderOptions> configureOptions,
         int partitionCount)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(partitionCount, 0);
+
         services.AddOptions<KafkaStreamProviderOptions>(providerName).Configure(options =>
         {
             options.PartitionCount = partitionCount;
@@ -196,12 +197,12 @@ public static class KafkaStreamProviderAspireExtensions
             options.TopicName = topicName;
         }
 
-        if (int.TryParse(configuration[nameof(KafkaStreamProviderOptions.PartitionCount)], out var configuredPartitionCount) && configuredPartitionCount > 0)
+        if (int.TryParse(configuration[nameof(KafkaStreamProviderOptions.PartitionCount)], out var configuredPartitionCount))
         {
             options.PartitionCount = configuredPartitionCount;
         }
 
-        if (short.TryParse(configuration[nameof(KafkaStreamProviderOptions.ReplicationFactor)], out var replicationFactor) && replicationFactor > 0)
+        if (short.TryParse(configuration[nameof(KafkaStreamProviderOptions.ReplicationFactor)], out var replicationFactor))
         {
             options.ReplicationFactor = replicationFactor;
         }
