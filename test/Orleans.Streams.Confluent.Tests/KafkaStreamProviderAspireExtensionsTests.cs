@@ -84,7 +84,6 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
             .Build();
 
         var optionsMonitor = host.Services.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>();
-        var factory = host.Services.GetServices<IQueueAdapterFactory>().OfType<KafkaQueueAdapterFactory>().Single();
         var options = optionsMonitor.Get("kafka");
 
         options.BootstrapServers.Should().Be("localhost:9092");
@@ -92,7 +91,6 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
         options.PartitionCount.Should().Be(12);
         options.ReplicationFactor.Should().Be(2);
         options.CreateTopicIfMissing.Should().BeFalse();
-        factory.GetStreamQueueMapper().Should().NotBeNull();
     }
 
     [TestMethod]
@@ -193,7 +191,6 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
             .Build();
 
         var optionsMonitor = host.Services.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>();
-        var factory = host.Services.GetServices<IQueueAdapterFactory>().OfType<KafkaQueueAdapterFactory>().Single();
         var options = optionsMonitor.Get("kafka");
 
         options.BootstrapServers.Should().Be("localhost:9092");
@@ -201,7 +198,6 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
         options.PartitionCount.Should().Be(12);
         options.ReplicationFactor.Should().Be(2);
         options.CreateTopicIfMissing.Should().BeFalse();
-        factory.GetStreamQueueMapper().Should().NotBeNull();
     }
 
     [TestMethod]

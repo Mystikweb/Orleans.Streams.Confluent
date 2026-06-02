@@ -7,6 +7,7 @@ using Orleans;
 using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
 using Orleans.Serialization;
+using Orleans.Streams;
 
 namespace Orleans.Streams.Confluent.Aspire;
 
@@ -86,6 +87,10 @@ public static class KafkaStreamProviderAspireExtensions
             options => ApplyConfiguration(options, configurationSection),
             partitionCount);
 
+        builder.AddPersistentStreams(providerName, CreateQueueAdapterFactory, _ =>
+        {
+        });
+
         return builder;
     }
 
@@ -108,6 +113,10 @@ public static class KafkaStreamProviderAspireExtensions
             options => ApplyConfiguration(options, configurationSection),
             partitionCount);
 
+        builder.AddPersistentStreams(providerName, CreateQueueAdapterFactory, _ =>
+        {
+        });
+
         return builder;
     }
 
@@ -128,15 +137,18 @@ public static class KafkaStreamProviderAspireExtensions
             configureOptions.Invoke(options);
         });
 
-        services.AddSingleton<IQueueAdapterFactory>(serviceProvider =>
-        {
-            var options = serviceProvider.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>().Get(providerName);
-            var queueMapperOptions = serviceProvider.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get(providerName);
-            var cacheOptions = serviceProvider.GetRequiredService<IOptionsMonitor<SimpleQueueCacheOptions>>().Get(providerName);
-            var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-            var serializer = serviceProvider.GetRequiredService<Serializer<KafkaBatchContainer>>();
-            return new KafkaQueueAdapterFactory(providerName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer);
-        });
+        services.AddSingleton<IQueueAdapterFactory>(serviceProvider => CreateQueueAdapterFactory(serviceProvider, providerName));
+
+    }
+
+    private static IQueueAdapterFactory CreateQueueAdapterFactory(IServiceProvider serviceProvider, string streamProviderName)
+    {
+        var options = serviceProvider.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>().Get(streamProviderName);
+        var queueMapperOptions = serviceProvider.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get(streamProviderName);
+        var cacheOptions = serviceProvider.GetRequiredService<IOptionsMonitor<SimpleQueueCacheOptions>>().Get(streamProviderName);
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var serializer = serviceProvider.GetRequiredService<Serializer<KafkaBatchContainer>>();
+        return new KafkaQueueAdapterFactory(streamProviderName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer);
     }
 
     private static void ApplyConfiguration(KafkaStreamProviderOptions options, IConfiguration configuration)

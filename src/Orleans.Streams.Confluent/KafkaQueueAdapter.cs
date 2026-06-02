@@ -13,7 +13,8 @@ internal sealed partial class KafkaQueueAdapter(
     KafkaStreamProviderOptions options,
     Serializer<KafkaBatchContainer> serializer,
     ILoggerFactory loggerFactory,
-    HashRingBasedStreamQueueMapper streamQueueMapper) : IQueueAdapter
+    HashRingBasedStreamQueueMapper streamQueueMapper,
+    IProducer<Null, byte[]> producer) : IQueueAdapter
 {
     private readonly ConcurrentDictionary<QueueId, KafkaQueueAdapterReceiver> _receivers = new();
     private readonly ILogger _logger = loggerFactory.CreateLogger<KafkaQueueAdapter>();
@@ -53,10 +54,6 @@ internal sealed partial class KafkaQueueAdapter(
         {
             var queueId = streamQueueMapper.GetQueueForStream(streamId);
             LogDebugQueueingMessageBatch(streamId, queueId, options.TopicName);
-
-            var producerConfig = KafkaClientConfigurationBuilder.CreateProducerConfig(options);
-
-            using var producer = new ProducerBuilder<Null, byte[]>(producerConfig).Build();
 
             if (token is not Providers.Streams.Common.EventSequenceTokenV2 eventToken)
             {

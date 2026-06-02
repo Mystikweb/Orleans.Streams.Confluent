@@ -22,6 +22,7 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
 
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private IAdminClient? _adminClient;
+    private readonly Lazy<IProducer<Null, byte[]>> _producer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaQueueAdapterFactory"/> class.
@@ -55,6 +56,9 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
         queueMapperOptions.TotalQueueCount = _options.PartitionCount;
         _streamQueueMapper = new HashRingBasedStreamQueueMapper(queueMapperOptions, _providerName);
         _adapterCache = new SimpleQueueAdapterCache(cacheOptions ?? throw new ArgumentNullException(nameof(cacheOptions)), _providerName, loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory)));
+        _producer = new Lazy<IProducer<Null, byte[]>>(
+            () => new ProducerBuilder<Null, byte[]>(KafkaClientConfigurationBuilder.CreateProducerConfig(_options)).Build(),
+            LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     /// <inheritdoc />
@@ -64,7 +68,7 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
         {
             LogDebugCreatingAdapter(_providerName, _options.TopicName, _options.PartitionCount);
             await EnsureTopicAsync().ConfigureAwait(false);
-            var adapter = new KafkaQueueAdapter(_providerName, _options, _serializer, _loggerFactory, _streamQueueMapper);
+            var adapter = new KafkaQueueAdapter(_providerName, _options, _serializer, _loggerFactory, _streamQueueMapper, _producer.Value);
             LogDebugAdapterCreated(_providerName, _options.TopicName);
             return adapter;
         }
@@ -130,6 +134,7 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
             }
             catch (CreateTopicsException ex) when (ex.Results.Count == 1 && ex.Results[0].Error.Code == global::Confluent.Kafka.ErrorCode.TopicAlreadyExists)
             {
+                ValidateExistingTopicPartitionCount(_options.TopicName, _options.PartitionCount);
                 LogDebugTopicAlreadyExists(_options.TopicName);
             }
             catch (Exception ex)
@@ -162,8 +167,28 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
         throw new TimeoutException($"Kafka topic '{topicName}' was not fully provisioned with {partitionCount} partition(s) before the timeout elapsed.");
     }
 
+    private void ValidateExistingTopicPartitionCount(string topicName, int expectedPartitionCount)
+    {
+        var metadata = _adminClient!.GetMetadata(TimeSpan.FromSeconds(5));
+        var existingTopic = metadata.Topics.FirstOrDefault(topic => topic.Topic == topicName && topic.Error.IsError is false);
+        if (existingTopic is null)
+        {
+            throw new InvalidOperationException($"Kafka topic '{topicName}' exists but metadata could not be retrieved for validation.");
+        }
+
+        if (existingTopic.Partitions.Count != expectedPartitionCount)
+        {
+            throw new InvalidOperationException($"Kafka topic '{topicName}' exists with {existingTopic.Partitions.Count} partition(s) but provider '{_providerName}' is configured for {expectedPartitionCount} partition(s).");
+        }
+    }
+
     public ValueTask DisposeAsync()
     {
+        if (_producer.IsValueCreated)
+        {
+            _producer.Value.Dispose();
+        }
+
         _adminClient?.Dispose();
         _initializationLock.Dispose();
         return ValueTask.CompletedTask;
