@@ -55,11 +55,15 @@ internal sealed partial class KafkaQueueAdapter(
             LogDebugQueueingMessageBatch(streamId, queueId, options.TopicName);
 
             var producerConfig = KafkaClientConfigurationBuilder.CreateProducerConfig(options);
+            var producerConfig = KafkaClientConfigurationBuilder.CreateProducerConfig(options);
 
             using var producer = new ProducerBuilder<Null, byte[]>(producerConfig).Build();
-            var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, requestContext, options.TopicName, (int)queueId.GetNumericId(), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            var sequenceNumber = token is Orleans.Providers.Streams.Common.EventSequenceTokenV2 eventToken
+                ? eventToken.SequenceNumber
+                : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+            var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, requestContext, options.TopicName, (int)queueId.GetNumericId(), sequenceNumber);
             await producer.ProduceAsync(new TopicPartition(options.TopicName, new Partition((int)queueId.GetNumericId())), new Message<Null, byte[]> { Value = payload }).ConfigureAwait(false);
-            producer.Flush(TimeSpan.FromSeconds(5));
             LogDebugQueuedMessageBatch(streamId, queueId, options.TopicName);
         }
         catch (Exception ex)
