@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Orleans.Configuration;
 using Orleans.Hosting;
-using Orleans.Providers.Streams.Common;
 using Orleans.Streams.Confluent.Aspire;
 
 namespace Orleans.Streams.Confluent.Tests;
