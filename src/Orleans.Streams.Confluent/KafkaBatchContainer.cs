@@ -1,0 +1,89 @@
+﻿using Orleans.Providers.Streams.Common;
+using Orleans.Serialization;
+
+namespace Orleans.Streams.Confluent;
+
+/// <summary>
+/// A Kafka-backed Orleans batch container.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="KafkaBatchContainer"/> class.
+/// </remarks>
+[GenerateSerializer]
+[Alias("Orleans.Streams.Confluent.KafkaBatchContainer")]
+public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, Dictionary<string, object> requestContext, string topic, int partition, long offset) : IBatchContainer
+{
+    [Id(0)]
+    public StreamId StreamId { get; } = streamId;
+
+    [Id(1)]
+    public List<object> Events { get; } = events ?? throw new ArgumentNullException(nameof(events));
+
+    [Id(2)]
+    public Dictionary<string, object> RequestContext { get; } = requestContext ?? [];
+
+    [Id(3)]
+    public StreamSequenceToken SequenceToken { get; } = new EventSequenceTokenV2(offset);
+
+    [Id(4)]
+    public string Topic { get; } = topic ?? throw new ArgumentNullException(nameof(topic));
+
+    [Id(5)]
+    public int Partition { get; } = partition;
+
+    [Id(6)]
+    public long Offset { get; } = offset;
+
+    /// <inheritdoc />
+    public IEnumerable<Tuple<T, StreamSequenceToken>> GetEvents<T>()
+    {
+        return Events.OfType<T>().Select((item, index) =>
+        {
+            var token = SequenceToken is EventSequenceTokenV2 eventToken
+                ? eventToken.CreateSequenceTokenForEvent(index)
+                : SequenceToken;
+
+            return Tuple.Create(item, token);
+        });
+    }
+
+    /// <inheritdoc />
+    public bool ImportRequestContext()
+    {
+        if (RequestContext.Count == 0)
+        {
+            return false;
+        }
+
+        RequestContextExtensions.Import(RequestContext);
+        return true;
+    }
+
+    /// <summary>
+    /// Creates a Kafka batch payload from Orleans stream events.
+    /// </summary>
+    public static byte[] ToPayload<T>(Serializer<KafkaBatchContainer> serializer, StreamId streamId, IEnumerable<T> events, Dictionary<string, object> requestContext, string topic, int partition, long offset)
+    {
+        ArgumentNullException.ThrowIfNull(serializer);
+        ArgumentNullException.ThrowIfNull(events);
+
+        var container = new KafkaBatchContainer(streamId, [.. events.Cast<object>()], requestContext, topic, partition, offset);
+        return serializer.SerializeToArray(container);
+    }
+
+    /// <summary>
+    /// Converts the serialized payload back into a batch container.
+    /// </summary>
+    public static KafkaBatchContainer FromPayload(Serializer<KafkaBatchContainer> serializer, byte[] payload)
+    {
+        ArgumentNullException.ThrowIfNull(serializer);
+        ArgumentNullException.ThrowIfNull(payload);
+
+        return serializer.Deserialize(payload);
+    }
+
+    /// <summary>
+    /// Creates a human-readable representation of the container.
+    /// </summary>
+    public override string ToString() => $"[{nameof(KafkaBatchContainer)}:Topic={Topic},Partition={Partition},Offset={Offset},#Items={Events.Count}]";
+}

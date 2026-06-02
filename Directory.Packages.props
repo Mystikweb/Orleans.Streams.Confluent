@@ -1,0 +1,18 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageVersionOverrideEnabled>false</CentralPackageVersionOverrideEnabled>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Confluent.Kafka" Version="2.14.2" />
+    <PackageVersion Include="FluentAssertions" Version="8.3.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="10.1.0" />
+    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="10.1.0" />
+    <PackageVersion Include="MSTest.TestAdapter" Version="3.8.3" />
+    <PackageVersion Include="MSTest.TestFramework" Version="3.8.3" />
+    <PackageVersion Include="Testcontainers.Kafka" Version="4.3.0" />
+  </ItemGroup>
+</Project>
