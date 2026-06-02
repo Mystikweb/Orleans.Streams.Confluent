@@ -14,6 +14,62 @@ namespace Orleans.Streams.Confluent.Tests;
 public sealed class KafkaStreamProviderBuilderExtensionsTests
 {
     [TestMethod]
+    public void AddKafkaStreamProvider_WhenPartitionCountIsNotPositive_ThrowsArgumentOutOfRangeException()
+    {
+        using var host = new HostBuilder()
+            .UseOrleans(silo =>
+            {
+                silo.UseLocalhostClustering();
+                silo.Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = Guid.NewGuid().ToString("N");
+                    options.ServiceId = Guid.NewGuid().ToString("N");
+                });
+                silo.AddKafkaStreamProvider(
+                    providerName: "kafka",
+                    configureOptions: options =>
+                    {
+                        options.BootstrapServers = "localhost:9092";
+                        options.TopicName = "orders-topic";
+                        options.PartitionCount = 0;
+                    });
+            })
+            .Build();
+
+        Action act = () => host.Services.GetServices<IQueueAdapterFactory>().OfType<KafkaQueueAdapterFactory>().Single();
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [TestMethod]
+    public void AddKafkaStreamProvider_WhenReplicationFactorIsNotPositive_ThrowsArgumentOutOfRangeException()
+    {
+        using var host = new HostBuilder()
+            .UseOrleans(silo =>
+            {
+                silo.UseLocalhostClustering();
+                silo.Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = Guid.NewGuid().ToString("N");
+                    options.ServiceId = Guid.NewGuid().ToString("N");
+                });
+                silo.AddKafkaStreamProvider(
+                    providerName: "kafka",
+                    configureOptions: options =>
+                    {
+                        options.BootstrapServers = "localhost:9092";
+                        options.TopicName = "orders-topic";
+                        options.ReplicationFactor = 0;
+                    });
+            })
+            .Build();
+
+        Action act = () => host.Services.GetServices<IQueueAdapterFactory>().OfType<KafkaQueueAdapterFactory>().Single();
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [TestMethod]
     public void AddKafkaStreamProvider_WhenProviderNameIsWhitespace_ThrowsArgumentException()
     {
         Action act = () =>

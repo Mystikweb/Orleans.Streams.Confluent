@@ -143,6 +143,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         return autoOffsetReset switch
         {
             AutoOffsetReset.Earliest => watermarkOffsets.Low,
+            AutoOffsetReset.Error => throw new InvalidOperationException($"Kafka receiver for provider '{providerName}' has no committed offset for topic '{topicPartition.Topic}' partition {topicPartition.Partition.Value} and auto.offset.reset is configured as 'error'."),
             _ => watermarkOffsets.High
         };
     }
