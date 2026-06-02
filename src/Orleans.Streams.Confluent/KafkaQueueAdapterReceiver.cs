@@ -96,8 +96,8 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         try
         {
             LogDebugShuttingDownReceiver(queueId);
+            _consumer?.Close();
             _consumer?.Dispose();
-            _consumer = null;
             return Task.CompletedTask;
         }
         catch (Exception ex)
