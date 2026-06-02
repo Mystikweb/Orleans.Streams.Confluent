@@ -54,7 +54,14 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
                     break;
                 }
 
-                var container = KafkaBatchContainer.FromPayload(serializer, result.Message.Value);
+                if (result.IsPartitionEOF || result.Message?.Value is null)
+                {
+                    continue;
+                }
+
+                var container = KafkaBatchContainer
+                    .FromPayload(serializer, result.Message.Value)
+                    .WithKafkaMetadata(result.Topic, result.Partition.Value, result.Offset.Value);
                 batches.Add(container);
             }
 
@@ -81,7 +88,22 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
 
         try
         {
-            _consumer.Commit();
+            var commitOffsets = messages
+                .OfType<KafkaBatchContainer>()
+                .GroupBy(batch => new TopicPartition(batch.Topic, new Partition(batch.Partition)))
+                .Select(group =>
+                {
+                    var nextOffset = group.Max(batch => batch.Offset) + 1;
+                    return new TopicPartitionOffset(group.Key, new Offset(nextOffset));
+                })
+                .ToList();
+
+            if (commitOffsets.Count == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            _consumer.Commit(commitOffsets);
             LogDebugMessagesCommitted(queueId, messages.Count);
             return Task.CompletedTask;
         }

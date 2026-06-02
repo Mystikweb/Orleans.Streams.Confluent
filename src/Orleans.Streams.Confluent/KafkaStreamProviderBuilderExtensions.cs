@@ -15,6 +15,11 @@ public static class KafkaStreamProviderBuilderExtensions
     /// <summary>
     /// Registers the Kafka stream provider infrastructure and options.
     /// </summary>
+    /// <param name="builder">The Orleans silo builder.</param>
+    /// <param name="providerName">The logical stream provider name used for named options and stream provider resolution.</param>
+    /// <param name="configureOptions">Optional callback to configure Kafka provider options.</param>
+    /// <param name="partitionCount">The default partition count assigned before <paramref name="configureOptions"/> runs.</param>
+    /// <returns>The updated silo builder.</returns>
     public static ISiloBuilder AddKafkaStreamProvider(this ISiloBuilder builder, string providerName, Action<KafkaStreamProviderOptions>? configureOptions = null, int partitionCount = HashRingStreamQueueMapperOptions.DEFAULT_NUM_QUEUES)
     {
         ArgumentNullException.ThrowIfNull(builder);

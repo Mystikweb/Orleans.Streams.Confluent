@@ -83,6 +83,14 @@ public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, 
     }
 
     /// <summary>
+    /// Creates a copy of this batch container with metadata from the consumed Kafka record.
+    /// </summary>
+    public KafkaBatchContainer WithKafkaMetadata(string topic, int partition, long offset)
+    {
+        return new KafkaBatchContainer(StreamId, Events, RequestContext, topic, partition, offset);
+    }
+
+    /// <summary>
     /// Creates a human-readable representation of the container.
     /// </summary>
     public override string ToString() => $"[{nameof(KafkaBatchContainer)}:Topic={Topic},Partition={Partition},Offset={Offset},#Items={Events.Count}]";

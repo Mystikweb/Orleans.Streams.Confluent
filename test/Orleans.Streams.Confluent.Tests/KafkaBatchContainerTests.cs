@@ -80,4 +80,24 @@ public sealed class KafkaBatchContainerTests
         text.Should().Contain("Offset=25");
         text.Should().Contain("#Items=2");
     }
+
+    [TestMethod]
+    public void WithKafkaMetadata_WhenApplied_UsesConsumedTopicPartitionAndOffsetForSequenceToken()
+    {
+        var original = new KafkaBatchContainer(
+            StreamId.Create("orders", "order-123"),
+            ["created"],
+            [],
+            "sender-topic",
+            1,
+            10);
+
+        var updated = original.WithKafkaMetadata("broker-topic", 7, 42);
+
+        updated.Topic.Should().Be("broker-topic");
+        updated.Partition.Should().Be(7);
+        updated.Offset.Should().Be(42);
+        updated.SequenceToken.Should().BeOfType<EventSequenceTokenV2>();
+        ((EventSequenceTokenV2)updated.SequenceToken).SequenceNumber.Should().Be(42);
+    }
 }
