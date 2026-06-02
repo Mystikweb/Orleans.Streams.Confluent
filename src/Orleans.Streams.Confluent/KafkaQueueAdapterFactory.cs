@@ -27,6 +27,12 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
     /// <summary>
     /// Initializes a new instance of the <see cref="KafkaQueueAdapterFactory"/> class.
     /// </summary>
+    /// <param name="providerName">The Orleans stream provider name used for named options resolution.</param>
+    /// <param name="options">The provider-specific Kafka options resolved for <paramref name="providerName"/>.</param>
+    /// <param name="queueMapperOptions">The Orleans queue mapper options snapshot for this provider.</param>
+    /// <param name="cacheOptions">The Orleans queue cache options snapshot for this provider.</param>
+    /// <param name="loggerFactory">The logger factory used to create provider diagnostics loggers.</param>
+    /// <param name="serializer">The serializer used for <see cref="KafkaBatchContainer"/> payloads.</param>
     public KafkaQueueAdapterFactory(
         string providerName,
         KafkaStreamProviderOptions options,

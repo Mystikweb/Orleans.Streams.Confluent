@@ -19,6 +19,15 @@ public static class KafkaStreamProviderAspireExtensions
     /// <summary>
     /// Registers the Kafka stream provider using values from the specified configuration section path.
     /// </summary>
+    /// <param name="builder">The Orleans silo builder.</param>
+    /// <param name="providerName">The stream provider name used for Orleans provider resolution and named options binding.</param>
+    /// <param name="configuration">The configuration root used to resolve provider settings.</param>
+    /// <param name="sectionPath">
+    /// The configuration section path to bind. When this value matches <c>Orleans:Streams:Kafka</c>,
+    /// provider-scoped configuration at <c>Orleans:Streams:Kafka:{providerName}</c> takes precedence when present.
+    /// </param>
+    /// <param name="partitionCount">The default partition count assigned before configuration values are applied.</param>
+    /// <returns>The updated silo builder.</returns>
     public static ISiloBuilder AddKafkaStreamProviderFromConfiguration(
         this ISiloBuilder builder,
         string providerName,
@@ -45,6 +54,15 @@ public static class KafkaStreamProviderAspireExtensions
     /// <summary>
     /// Registers the Kafka stream provider using values from the specified configuration section path.
     /// </summary>
+    /// <param name="builder">The Orleans client builder.</param>
+    /// <param name="providerName">The stream provider name used for Orleans provider resolution and named options binding.</param>
+    /// <param name="configuration">The configuration root used to resolve provider settings.</param>
+    /// <param name="sectionPath">
+    /// The configuration section path to bind. When this value matches <c>Orleans:Streams:Kafka</c>,
+    /// provider-scoped configuration at <c>Orleans:Streams:Kafka:{providerName}</c> takes precedence when present.
+    /// </param>
+    /// <param name="partitionCount">The default partition count assigned before configuration values are applied.</param>
+    /// <returns>The updated client builder.</returns>
     public static IClientBuilder AddKafkaStreamProviderFromConfiguration(
         this IClientBuilder builder,
         string providerName,
@@ -71,6 +89,11 @@ public static class KafkaStreamProviderAspireExtensions
     /// <summary>
     /// Registers the Kafka stream provider using values from a configuration section.
     /// </summary>
+    /// <param name="builder">The Orleans silo builder.</param>
+    /// <param name="providerName">The stream provider name used for Orleans provider resolution and named options binding.</param>
+    /// <param name="configurationSection">The configuration section containing Kafka stream provider settings.</param>
+    /// <param name="partitionCount">The default partition count assigned before configuration values are applied.</param>
+    /// <returns>The updated silo builder.</returns>
     public static ISiloBuilder AddKafkaStreamProviderFromConfiguration(
         this ISiloBuilder builder,
         string providerName,
@@ -97,6 +120,11 @@ public static class KafkaStreamProviderAspireExtensions
     /// <summary>
     /// Registers the Kafka stream provider using values from a configuration section.
     /// </summary>
+    /// <param name="builder">The Orleans client builder.</param>
+    /// <param name="providerName">The stream provider name used for Orleans provider resolution and named options binding.</param>
+    /// <param name="configurationSection">The configuration section containing Kafka stream provider settings.</param>
+    /// <param name="partitionCount">The default partition count assigned before configuration values are applied.</param>
+    /// <returns>The updated client builder.</returns>
     public static IClientBuilder AddKafkaStreamProviderFromConfiguration(
         this IClientBuilder builder,
         string providerName,

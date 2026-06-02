@@ -16,7 +16,7 @@ internal sealed partial class KafkaQueueAdapter(
     HashRingBasedStreamQueueMapper streamQueueMapper,
     IProducer<Null, byte[]> producer) : IQueueAdapter
 {
-    private readonly ConcurrentDictionary<QueueId, KafkaQueueAdapterReceiver> _receivers = new();
+    private readonly ConcurrentDictionary<QueueId, Lazy<KafkaQueueAdapterReceiver>> _receivers = new();
     private readonly ILogger _logger = loggerFactory.CreateLogger<KafkaQueueAdapter>();
 
     public string Name => providerName;
@@ -27,23 +27,19 @@ internal sealed partial class KafkaQueueAdapter(
 
     public IQueueAdapterReceiver CreateReceiver(QueueId queueId)
     {
-        var created = false;
-        var receiver = _receivers.GetOrAdd(queueId, id =>
-        {
-            created = true;
-            return CreateReceiverForQueue(id);
-        });
+        var lazyReceiver = new Lazy<KafkaQueueAdapterReceiver>(
+            () => CreateReceiverForQueue(queueId),
+            LazyThreadSafetyMode.ExecutionAndPublication);
 
-        if (created)
+        if (_receivers.TryAdd(queueId, lazyReceiver))
         {
             LogDebugReceiverCreated(queueId);
-        }
-        else
-        {
-            LogDebugReceiverReused(queueId);
+            return lazyReceiver.Value;
         }
 
-        return receiver;
+        LogDebugReceiverReused(queueId);
+
+        return _receivers[queueId].Value;
     }
 
     public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
