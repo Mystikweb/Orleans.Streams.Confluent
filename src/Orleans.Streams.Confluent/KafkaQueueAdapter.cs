@@ -1,7 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
+using Orleans;
+using Orleans.Configuration;
 using Orleans.Serialization;
+using Orleans.Streams;
 
 namespace Orleans.Streams.Confluent;
 

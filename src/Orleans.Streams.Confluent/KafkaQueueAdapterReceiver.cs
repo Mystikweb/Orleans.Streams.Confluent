@@ -1,6 +1,7 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Orleans.Serialization;
+using Orleans.Streams;
 
 namespace Orleans.Streams.Confluent;
 

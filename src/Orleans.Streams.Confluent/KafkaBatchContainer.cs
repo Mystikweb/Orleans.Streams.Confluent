@@ -1,5 +1,7 @@
-﻿using Orleans.Providers.Streams.Common;
+﻿using Orleans;
+using Orleans.Providers.Streams.Common;
 using Orleans.Serialization;
+using Orleans.Streams;
 
 namespace Orleans.Streams.Confluent;
 

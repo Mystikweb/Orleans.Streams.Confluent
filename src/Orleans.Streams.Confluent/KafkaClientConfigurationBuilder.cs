@@ -62,14 +62,14 @@ internal static class KafkaClientConfigurationBuilder
             var separatorIndex = rawPart.IndexOf('=');
             if (separatorIndex <= 0)
             {
-                throw new ArgumentException($"Kafka connection string segment '{rawPart}' is invalid. Expected key=value format.", nameof(connectionString));
+                throw new ArgumentException("Kafka connection string contains an invalid segment. Expected key=value format.", nameof(connectionString));
             }
 
             var key = NormalizeKey(rawPart[..separatorIndex].Trim());
             var value = rawPart[(separatorIndex + 1)..].Trim();
             if (key.Length == 0)
             {
-                throw new ArgumentException($"Kafka connection string segment '{rawPart}' has an empty key.", nameof(connectionString));
+                throw new ArgumentException("Kafka connection string contains a segment with an empty key.", nameof(connectionString));
             }
 
             settings[key] = value;
