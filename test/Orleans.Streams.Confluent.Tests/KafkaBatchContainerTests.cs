@@ -84,10 +84,11 @@ public sealed class KafkaBatchContainerTests
     [TestMethod]
     public void WithKafkaMetadata_WhenApplied_UsesConsumedTopicPartitionAndOffsetForSequenceToken()
     {
+        var requestContext = new Dictionary<string, object> { ["tenant"] = "acme" };
         var original = new KafkaBatchContainer(
             StreamId.Create("orders", "order-123"),
             ["created"],
-            [],
+            requestContext,
             "sender-topic",
             1,
             10);
@@ -99,5 +100,15 @@ public sealed class KafkaBatchContainerTests
         updated.Offset.Should().Be(42);
         updated.SequenceToken.Should().BeOfType<EventSequenceTokenV2>();
         ((EventSequenceTokenV2)updated.SequenceToken).SequenceNumber.Should().Be(42);
+        updated.Events.Should().Equal("created");
+        updated.Events.Should().NotBeSameAs(original.Events);
+        updated.RequestContext.Should().ContainKey("tenant").WhoseValue.Should().Be("acme");
+        updated.RequestContext.Should().NotBeSameAs(original.RequestContext);
+
+        original.Events.Add("paid");
+        original.RequestContext["tenant"] = "contoso";
+
+        updated.Events.Should().Equal("created");
+        updated.RequestContext["tenant"].Should().Be("acme");
     }
 }

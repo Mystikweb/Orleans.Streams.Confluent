@@ -89,7 +89,7 @@ public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, 
     /// </summary>
     public KafkaBatchContainer WithKafkaMetadata(string topic, int partition, long offset)
     {
-        return new KafkaBatchContainer(StreamId, Events, RequestContext, topic, partition, offset);
+        return new KafkaBatchContainer(StreamId, [.. Events], new Dictionary<string, object>(RequestContext), topic, partition, offset);
     }
 
     /// <summary>

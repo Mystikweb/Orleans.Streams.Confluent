@@ -32,6 +32,7 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
         }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(options.TopicName);
+        ValidateTopicProvisioningValues(options.PartitionCount, options.ReplicationFactor);
 
         return service.WithStreaming(providerName, new KafkaStreamProviderConfiguration(options));
     }
@@ -96,6 +97,7 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
         ArgumentNullException.ThrowIfNull(kafkaResource);
         ArgumentException.ThrowIfNullOrWhiteSpace(topicName);
+        ValidateTopicProvisioningValues(partitionCount, replicationFactor);
 
         return service.WithStreaming(
             providerName,
@@ -105,6 +107,19 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
                 partitionCount,
                 replicationFactor,
                 createTopicIfMissing));
+    }
+
+    private static void ValidateTopicProvisioningValues(int? partitionCount, short? replicationFactor)
+    {
+        if (partitionCount is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(partitionCount), partitionCount, "PartitionCount must be greater than zero when specified.");
+        }
+
+        if (replicationFactor is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(replicationFactor), replicationFactor, "ReplicationFactor must be greater than zero when specified.");
+        }
     }
 
     /// <summary>

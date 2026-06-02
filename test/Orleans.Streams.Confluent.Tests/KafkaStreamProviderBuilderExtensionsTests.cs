@@ -42,7 +42,9 @@ public sealed class KafkaStreamProviderBuilderExtensionsTests
                 .Build();
         };
 
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        act.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .Which.ParamName.Should().Be("partitionCount");
     }
 
     [TestMethod]
@@ -70,7 +72,9 @@ public sealed class KafkaStreamProviderBuilderExtensionsTests
 
         Action act = () => CreateFactory(host.Services, "kafka");
 
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        act.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .Which.ParamName.Should().Be(nameof(KafkaStreamProviderOptions.PartitionCount));
     }
 
     [TestMethod]
@@ -98,7 +102,9 @@ public sealed class KafkaStreamProviderBuilderExtensionsTests
 
         Action act = () => CreateFactory(host.Services, "kafka");
 
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        act.Should()
+            .Throw<ArgumentOutOfRangeException>()
+            .Which.ParamName.Should().Be(nameof(KafkaStreamProviderOptions.ReplicationFactor));
     }
 
     [TestMethod]

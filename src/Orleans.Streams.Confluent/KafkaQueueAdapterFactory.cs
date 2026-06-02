@@ -60,12 +60,12 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
 
         if (_options.PartitionCount <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options), _options.PartitionCount, "Kafka PartitionCount must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(KafkaStreamProviderOptions.PartitionCount), _options.PartitionCount, "Kafka PartitionCount must be greater than zero.");
         }
 
         if (_options.ReplicationFactor <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options), _options.ReplicationFactor, "Kafka ReplicationFactor must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(KafkaStreamProviderOptions.ReplicationFactor), _options.ReplicationFactor, "Kafka ReplicationFactor must be greater than zero.");
         }
 
         if (queueMapperOptions.TotalQueueCount != _options.PartitionCount)
