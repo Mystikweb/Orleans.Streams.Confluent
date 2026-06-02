@@ -1,0 +1,102 @@
+name: Issue Triage
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  label-issues:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Apply triage labels from issue forms
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = issue.number;
+            const body = issue.body || '';
+
+            const ensureLabel = async (name, color, description) => {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name,
+                  color,
+                  description
+                });
+              }
+            };
+
+            const labelDefs = [
+              { name: 'area:runtime', color: '0e8a16', description: 'Core runtime package concerns' },
+              { name: 'area:aspire-runtime', color: '1d76db', description: 'Aspire runtime adapter concerns' },
+              { name: 'area:aspire-hosting', color: '5319e7', description: 'Aspire AppHost modeling concerns' },
+              { name: 'area:tooling', color: 'fbca04', description: 'Tooling/workflow/build concerns' },
+              { name: 'area:docs', color: 'c5def5', description: 'Documentation concerns' },
+              { name: 'triage:needs-repro', color: 'b60205', description: 'Issue needs a minimal reproducible sample' }
+            ];
+
+            for (const label of labelDefs) {
+              await ensureLabel(label.name, label.color, label.description);
+            }
+
+            const labelsToAdd = new Set();
+
+            // Area mapping used by bug and feature templates.
+            if (body.includes('Core runtime (Orleans.Streams.Confluent)')) {
+              labelsToAdd.add('area:runtime');
+            }
+            if (body.includes('Aspire runtime adapter (Orleans.Streams.Confluent.Aspire)')) {
+              labelsToAdd.add('area:aspire-runtime');
+            }
+            if (body.includes('Aspire AppHost modeling (Orleans.Streams.Confluent.Aspire.Hosting)')) {
+              labelsToAdd.add('area:aspire-hosting');
+            }
+            if (body.includes('Tooling or workflows') || body.includes('Build or packaging')) {
+              labelsToAdd.add('area:tooling');
+            }
+            if (body.includes('Documentation')) {
+              labelsToAdd.add('area:docs');
+            }
+
+            // Package mapping used by the question template.
+            if (body.includes('### Package') && body.includes('Orleans.Streams.Confluent.Aspire.Hosting')) {
+              labelsToAdd.add('area:aspire-hosting');
+            } else if (body.includes('### Package') && body.includes('Orleans.Streams.Confluent.Aspire')) {
+              labelsToAdd.add('area:aspire-runtime');
+            } else if (body.includes('### Package') && body.includes('Orleans.Streams.Confluent')) {
+              labelsToAdd.add('area:runtime');
+            }
+
+            const hasCodeFence = body.includes('```');
+            const hasStepKeywords = /steps|repro|reproduce|minimal/i.test(body);
+            const isBug = (issue.labels || []).some(l => l.name === 'bug');
+
+            if (isBug && (!hasCodeFence || !hasStepKeywords)) {
+              labelsToAdd.add('triage:needs-repro');
+            }
+
+            if (labelsToAdd.size > 0) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                labels: Array.from(labelsToAdd)
+              });
+            }

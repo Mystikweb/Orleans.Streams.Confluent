@@ -2,6 +2,9 @@
 
 Kafka stream provider for Microsoft Orleans, with optional Aspire integration packages.
 
+Versioning and release policy is documented in [VERSIONING.md](VERSIONING.md).
+Contribution and triage guidance is documented in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## What This Library Gives You
 
 - Kafka-backed Orleans stream provider for publish/subscribe workloads.

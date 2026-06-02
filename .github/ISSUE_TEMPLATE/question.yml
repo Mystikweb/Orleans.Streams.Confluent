@@ -1,0 +1,51 @@
+name: Usage question
+description: Ask a usage/configuration question
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please share enough detail for maintainers to help quickly.
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - Orleans.Streams.Confluent
+        - Orleans.Streams.Confluent.Aspire
+        - Orleans.Streams.Confluent.Aspire.Hosting
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Relevant versions
+      placeholder: Package version, Orleans version, .NET version
+    validations:
+      required: true
+
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Scenario
+      description: What are you trying to build?
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What exactly are you unsure about?
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant config/code
+      description: Redact secrets before posting.
+      render: csharp

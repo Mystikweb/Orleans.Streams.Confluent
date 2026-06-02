@@ -1,0 +1,120 @@
+name: Bug report
+description: Report a reproducible defect in Orleans.Streams.Confluent
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug report. Please provide as much detail as possible so we can reproduce quickly.
+
+  - type: checkboxes
+    id: precheck
+    attributes:
+      label: Pre-check
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I can reproduce this issue on the latest published package version.
+          required: true
+
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version(s)
+      description: Example: Orleans.Streams.Confluent 1.2.3, Orleans.Streams.Confluent.Aspire 1.2.3
+      placeholder: Orleans.Streams.Confluent x.y.z
+    validations:
+      required: true
+
+  - type: input
+    id: dotnet-version
+    attributes:
+      label: .NET version
+      placeholder: net10.0 / SDK 10.0.x
+    validations:
+      required: true
+
+  - type: input
+    id: orleans-version
+    attributes:
+      label: Orleans version
+      placeholder: 10.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: kafka-environment
+    attributes:
+      label: Kafka environment
+      description: Broker type and version (Confluent Cloud, local Kafka, etc.)
+      placeholder: Confluent Cloud / Kafka x.y
+    validations:
+      required: true
+
+  - type: dropdown
+    id: integration-surface
+    attributes:
+      label: Area
+      options:
+        - Core runtime (Orleans.Streams.Confluent)
+        - Aspire runtime adapter (Orleans.Streams.Confluent.Aspire)
+        - Aspire AppHost modeling (Orleans.Streams.Confluent.Aspire.Hosting)
+        - Build or packaging
+        - Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug and include error messages.
+      placeholder: Clear and concise description of the observed behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      placeholder: Describe the expected behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Provide exact steps and a minimal repro if possible.
+      placeholder: |
+        1. Configure provider with ...
+        2. Start silo/client ...
+        3. Publish message ...
+        4. Observe error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: config-snippet
+    attributes:
+      label: Relevant configuration/code snippet
+      description: Redact secrets before posting.
+      render: csharp
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and stack trace
+      description: Include full stack trace when available.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other context that might help.
