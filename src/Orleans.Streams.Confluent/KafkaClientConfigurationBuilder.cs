@@ -37,11 +37,15 @@ internal static class KafkaClientConfigurationBuilder
         return new ProducerConfig(settings);
     }
 
-    public static ConsumerConfig CreateConsumerConfig(KafkaStreamProviderOptions options, string consumerGroup)
+    public static ConsumerConfig CreateConsumerConfig(KafkaStreamProviderOptions options, string consumerGroupPrefix, uint queueNumericId)
     {
         var settings = CreateBaseSettings(options);
 
-        settings["group.id"] = consumerGroup;
+        var baseConsumerGroup = settings.TryGetValue("group.id", out var configuredGroupId) && !string.IsNullOrWhiteSpace(configuredGroupId)
+            ? configuredGroupId
+            : consumerGroupPrefix;
+
+        settings["group.id"] = $"{baseConsumerGroup}-{queueNumericId}";
         settings.TryAdd("enable.auto.commit", "false");
         settings.TryAdd("auto.offset.reset", "latest");
         settings.TryAdd("allow.auto.create.topics", "false");

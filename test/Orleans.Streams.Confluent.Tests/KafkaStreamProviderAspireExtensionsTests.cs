@@ -133,7 +133,8 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
                 ["Orleans:Streams:Kafka:TopicName"] = "orders-topic",
                 ["Orleans:Streams:Kafka:PartitionCount"] = "12",
                 ["Orleans:Streams:Kafka:ReplicationFactor"] = "2",
-                ["Orleans:Streams:Kafka:CreateTopicIfMissing"] = "false"
+                ["Orleans:Streams:Kafka:CreateTopicIfMissing"] = "false",
+                ["Orleans:Streams:Kafka:ConsumerGroupPrefix"] = "orders-service"
             })
             .Build();
 
@@ -158,6 +159,7 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
         options.PartitionCount.Should().Be(12);
         options.ReplicationFactor.Should().Be(2);
         options.CreateTopicIfMissing.Should().BeFalse();
+        options.ConsumerGroupPrefix.Should().Be("orders-service");
     }
 
     [TestMethod]

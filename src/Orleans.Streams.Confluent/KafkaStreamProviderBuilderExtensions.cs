@@ -79,6 +79,7 @@ public static class KafkaStreamProviderBuilderExtensions
         var cacheOptions = serviceProvider.GetRequiredService<IOptionsMonitor<SimpleQueueCacheOptions>>().Get(streamProviderName);
         var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         var serializer = serviceProvider.GetRequiredService<Serializer<KafkaBatchContainer>>();
-        return new KafkaQueueAdapterFactory(streamProviderName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer);
+        var clusterOptions = serviceProvider.GetService<IOptions<ClusterOptions>>()?.Value;
+        return new KafkaQueueAdapterFactory(streamProviderName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer, clusterOptions);
     }
 }

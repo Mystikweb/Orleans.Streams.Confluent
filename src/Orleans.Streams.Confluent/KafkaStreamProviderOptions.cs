@@ -39,4 +39,10 @@ public sealed class KafkaStreamProviderOptions
     /// Gets or sets a value indicating whether the topic should be created if it does not exist.
     /// </summary>
     public bool CreateTopicIfMissing { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets an optional consumer-group prefix used when creating Kafka receiver groups.
+    /// The queue id is appended automatically to keep one Kafka group per Orleans queue.
+    /// </summary>
+    public string ConsumerGroupPrefix { get; set; } = string.Empty;
 }

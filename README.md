@@ -77,6 +77,7 @@ silo.AddKafkaStreamProvider(
 - `PartitionCount`
 - `ReplicationFactor`
 - `CreateTopicIfMissing`
+- `ConsumerGroupPrefix` (optional)
 
 `TopicName` is required.
 
@@ -193,8 +194,8 @@ var orleans = builder
 
 AppHost emits provider-scoped keys under:
 
-- `Orleans:Streams:Kafka:{providerName}:ConnectionString`
-- `Orleans:Streams:Kafka:{providerName}:BootstrapServers`
+- `Orleans:Streams:Kafka:{providerName}:ConnectionString` (emitted by `WithKafkaStreamProviderConnectionString(...)` and options-based AppHost wiring when `ConnectionString` is supplied)
+- `Orleans:Streams:Kafka:{providerName}:BootstrapServers` (emitted by `WithKafkaStreamProvider(..., bootstrapServers, ...)` and `WithKafkaStreamProvider(..., kafkaResource, ...)` resource wiring)
 - `Orleans:Streams:Kafka:{providerName}:TopicName`
 - `Orleans:Streams:Kafka:{providerName}:PartitionCount`
 - `Orleans:Streams:Kafka:{providerName}:ReplicationFactor`

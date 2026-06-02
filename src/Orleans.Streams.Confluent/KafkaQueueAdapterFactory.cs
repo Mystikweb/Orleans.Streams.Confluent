@@ -19,6 +19,7 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Serializer<KafkaBatchContainer> _serializer;
+    private readonly string _consumerGroupPrefix;
 
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private IAdminClient? _adminClient;
@@ -39,13 +40,15 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
         HashRingStreamQueueMapperOptions queueMapperOptions,
         SimpleQueueCacheOptions cacheOptions,
         ILoggerFactory loggerFactory,
-        Serializer<KafkaBatchContainer> serializer)
+        Serializer<KafkaBatchContainer> serializer,
+        ClusterOptions? clusterOptions = null)
     {
         _providerName = providerName ?? throw new ArgumentNullException(nameof(providerName));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         _logger = _loggerFactory.CreateLogger<KafkaQueueAdapterFactory>();
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
+        _consumerGroupPrefix = ResolveConsumerGroupPrefix(_providerName, _options.ConsumerGroupPrefix, clusterOptions);
         queueMapperOptions = queueMapperOptions ?? throw new ArgumentNullException(nameof(queueMapperOptions));
 
         if (string.IsNullOrWhiteSpace(_options.TopicName))
@@ -87,7 +90,7 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
         {
             LogDebugCreatingAdapter(_providerName, _options.TopicName, _options.PartitionCount);
             await EnsureTopicAsync().ConfigureAwait(false);
-            var adapter = new KafkaQueueAdapter(_providerName, _options, _serializer, _loggerFactory, _streamQueueMapper, _producer.Value);
+            var adapter = new KafkaQueueAdapter(_providerName, _options, _serializer, _loggerFactory, _streamQueueMapper, _producer.Value, _consumerGroupPrefix);
             LogDebugAdapterCreated(_providerName, _options.TopicName);
             return adapter;
         }
@@ -211,6 +214,21 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
         _adminClient?.Dispose();
         _initializationLock.Dispose();
         return ValueTask.CompletedTask;
+    }
+
+    private static string ResolveConsumerGroupPrefix(string providerName, string configuredPrefix, ClusterOptions? clusterOptions)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredPrefix))
+        {
+            return configuredPrefix.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(clusterOptions?.ServiceId))
+        {
+            return $"{providerName}-{clusterOptions.ServiceId}";
+        }
+
+        return providerName;
     }
 
     [LoggerMessage(

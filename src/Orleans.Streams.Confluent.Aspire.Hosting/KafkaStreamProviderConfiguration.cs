@@ -22,7 +22,7 @@ internal sealed class KafkaStreamProviderConfiguration(KafkaStreamProviderResour
         bool? createTopicIfMissing)
         : this(new KafkaStreamProviderResourceOptions
         {
-            ConnectionString = string.Empty,
+            BootstrapServers = string.Empty,
             TopicName = topicName,
             PartitionCount = partitionCount,
             ReplicationFactor = replicationFactor,
@@ -42,7 +42,7 @@ internal sealed class KafkaStreamProviderConfiguration(KafkaStreamProviderResour
 
         if (_connectionStringExpression is not null)
         {
-            resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.ConnectionString), _connectionStringExpression);
+            resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.BootstrapServers), _connectionStringExpression);
         }
         else if (!string.IsNullOrWhiteSpace(options.ConnectionString))
         {

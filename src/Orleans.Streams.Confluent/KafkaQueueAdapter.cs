@@ -17,7 +17,8 @@ internal sealed partial class KafkaQueueAdapter(
     Serializer<KafkaBatchContainer> serializer,
     ILoggerFactory loggerFactory,
     HashRingBasedStreamQueueMapper streamQueueMapper,
-    IProducer<Null, byte[]> producer) : IQueueAdapter
+    IProducer<Null, byte[]> producer,
+    string consumerGroupPrefix) : IQueueAdapter
 {
     private readonly ConcurrentDictionary<QueueId, Lazy<KafkaQueueAdapterReceiver>> _receivers = new();
     private readonly ILogger _logger = loggerFactory.CreateLogger<KafkaQueueAdapter>();
@@ -71,7 +72,7 @@ internal sealed partial class KafkaQueueAdapter(
     }
 
     private KafkaQueueAdapterReceiver CreateReceiverForQueue(QueueId queueId)
-        => new(providerName, options, serializer, loggerFactory.CreateLogger<KafkaQueueAdapterReceiver>(), queueId);
+        => new(providerName, options, serializer, loggerFactory.CreateLogger<KafkaQueueAdapterReceiver>(), queueId, consumerGroupPrefix);
 
     [LoggerMessage(
         EventId = 1,

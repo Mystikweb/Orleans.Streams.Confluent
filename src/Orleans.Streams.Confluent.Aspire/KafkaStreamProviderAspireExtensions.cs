@@ -179,7 +179,8 @@ public static class KafkaStreamProviderAspireExtensions
         var cacheOptions = serviceProvider.GetRequiredService<IOptionsMonitor<SimpleQueueCacheOptions>>().Get(streamProviderName);
         var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         var serializer = serviceProvider.GetRequiredService<Serializer<KafkaBatchContainer>>();
-        return new KafkaQueueAdapterFactory(streamProviderName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer);
+        var clusterOptions = serviceProvider.GetService<IOptions<ClusterOptions>>()?.Value;
+        return new KafkaQueueAdapterFactory(streamProviderName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer, clusterOptions);
     }
 
     private static void ApplyConfiguration(KafkaStreamProviderOptions options, IConfiguration configuration)
@@ -215,6 +216,12 @@ public static class KafkaStreamProviderAspireExtensions
         if (bool.TryParse(configuration[nameof(KafkaStreamProviderOptions.CreateTopicIfMissing)], out var createTopicIfMissing))
         {
             options.CreateTopicIfMissing = createTopicIfMissing;
+        }
+
+        var consumerGroupPrefix = configuration[nameof(KafkaStreamProviderOptions.ConsumerGroupPrefix)];
+        if (!string.IsNullOrWhiteSpace(consumerGroupPrefix))
+        {
+            options.ConsumerGroupPrefix = consumerGroupPrefix;
         }
     }
 }

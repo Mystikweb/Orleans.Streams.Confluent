@@ -8,7 +8,7 @@ namespace Orleans.Streams.Confluent;
 /// <summary>
 /// Receives Kafka messages for a single Orleans queue partition.
 /// </summary>
-internal sealed partial class KafkaQueueAdapterReceiver(string providerName, KafkaStreamProviderOptions options, Serializer<KafkaBatchContainer> serializer, ILogger logger, QueueId queueId) : IQueueAdapterReceiver
+internal sealed partial class KafkaQueueAdapterReceiver(string providerName, KafkaStreamProviderOptions options, Serializer<KafkaBatchContainer> serializer, ILogger logger, QueueId queueId, string consumerGroupPrefix) : IQueueAdapterReceiver
 {
     private readonly ILogger _logger = logger;
     private IConsumer<Ignore, byte[]>? _consumer;
@@ -17,16 +17,15 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
     {
         try
         {
-            var consumerGroup = $"{providerName}-{queueId.GetNumericId()}";
-            LogDebugInitializingReceiver(queueId, options.TopicName, consumerGroup);
-
-            var consumerConfig = KafkaClientConfigurationBuilder.CreateConsumerConfig(options, consumerGroup);
+            var queueNumericId = queueId.GetNumericId();
+            var consumerConfig = KafkaClientConfigurationBuilder.CreateConsumerConfig(options, consumerGroupPrefix, queueNumericId);
+            LogDebugInitializingReceiver(queueId, options.TopicName, consumerConfig.GroupId ?? string.Empty);
 
             _consumer = new ConsumerBuilder<Ignore, byte[]>(consumerConfig).Build();
-            var topicPartition = new TopicPartition(options.TopicName, new Partition((int)queueId.GetNumericId()));
+            var topicPartition = new TopicPartition(options.TopicName, new Partition((int)queueNumericId));
             var startingOffset = ResolveStartingOffset(topicPartition, timeout, consumerConfig.AutoOffsetReset);
             _consumer.Assign(new TopicPartitionOffset(topicPartition, startingOffset));
-            LogDebugReceiverAssigned(queueId, options.TopicName, queueId.GetNumericId());
+            LogDebugReceiverAssigned(queueId, options.TopicName, queueNumericId);
             return Task.CompletedTask;
         }
         catch (Exception ex)
