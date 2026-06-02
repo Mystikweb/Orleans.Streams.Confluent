@@ -128,7 +128,7 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
 
                 LogInformationTopicCreated(_options.TopicName, _options.PartitionCount, _options.ReplicationFactor);
             }
-            catch (CreateTopicsException ex) when (ex.Results.Count == 1 && ex.Results[0].Error.Reason.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+            catch (CreateTopicsException ex) when (ex.Results.Count == 1 && ex.Results[0].Error.Code == ErrorCode.TopicAlreadyExists)
             {
                 LogDebugTopicAlreadyExists(_options.TopicName);
             }
