@@ -1,14 +1,105 @@
 # Orleans.Streams.Confluent
 
-Microsoft Orleans Stream Provider for Confluent / Kafka
+Kafka stream provider for Microsoft Orleans, with optional Aspire integration packages.
 
-## Thin Aspire Adapter
+## What This Library Gives You
 
-This repository now includes a thin adapter project at `src/Orleans.Streams.Confluent.Aspire`.
+- Kafka-backed Orleans stream provider for publish/subscribe workloads.
+- Topic provisioning support (`CreateTopicIfMissing`) with partition validation.
+- Flexible Kafka client configuration via direct options or connection string.
+- Aspire integration for both runtime config binding and AppHost resource modeling.
 
-The adapter keeps Aspire-oriented configuration binding separate from the core stream provider package.
+## Install
 
-### Usage
+Core runtime package:
+
+```bash
+dotnet add package Orleans.Streams.Confluent
+```
+
+Aspire runtime adapter package (use in Orleans server/client projects):
+
+```bash
+dotnet add package Orleans.Streams.Confluent.Aspire
+```
+
+Aspire AppHost modeling package (use in AppHost projects):
+
+```bash
+dotnet add package Orleans.Streams.Confluent.Aspire.Hosting
+```
+
+## Choose the Right Package
+
+- Orleans silo/client project without Aspire AppHost modeling:
+    use `Orleans.Streams.Confluent`.
+- Orleans silo/client project with configuration-driven setup:
+    use `Orleans.Streams.Confluent.Aspire`.
+- Aspire AppHost project that models Orleans resources:
+    use `Orleans.Streams.Confluent.Aspire.Hosting`.
+
+## Packages
+
+- `Orleans.Streams.Confluent`:
+  Core runtime stream provider for Orleans silo/client projects.
+- `Orleans.Streams.Confluent.Aspire`:
+  Runtime configuration-binding helpers for Aspire-hosted Orleans projects.
+- `Orleans.Streams.Confluent.Aspire.Hosting`:
+  AppHost modeling extensions for `builder.AddOrleans("default")`.
+
+## Runtime Library
+
+Use the core runtime package when configuring Orleans directly in your silo project.
+
+```csharp
+using Orleans.Streams.Confluent;
+
+silo.AddKafkaStreamProvider(
+    providerName: "kafka",
+    configureOptions: options =>
+    {
+        options.BootstrapServers = "localhost:9092";
+        options.TopicName = "orders-topic";
+        options.PartitionCount = 12;
+        options.ReplicationFactor = 1;
+        options.CreateTopicIfMissing = true;
+    });
+```
+
+### Runtime Options
+
+- `ConnectionString` (optional)
+- `BootstrapServers`
+- `TopicName`
+- `PartitionCount`
+- `ReplicationFactor`
+- `CreateTopicIfMissing`
+
+`TopicName` is required.
+
+Either `BootstrapServers` or a `ConnectionString` containing `bootstrap.servers` must be provided.
+
+If both are configured, `BootstrapServers` takes precedence over `bootstrap.servers` from `ConnectionString`.
+
+## Connection String Configuration
+
+`ConnectionString` is a semicolon-delimited key/value list for Kafka client settings and supports arbitrary Confluent client properties.
+
+Example:
+
+```text
+bootstrap.servers=host1:9092,host2:9092;security.protocol=SASL_SSL;sasl.mechanism=PLAIN;sasl.username=key;sasl.password=secret
+```
+
+This lets developers add security and transport settings without expanding extension method parameters.
+
+## Aspire Integration
+
+### Runtime Adapter (`Orleans.Streams.Confluent.Aspire`)
+
+Use this package in Orleans server/client projects to bind provider settings from configuration.
+
+Silo usage:
 
 ```csharp
 using Orleans.Streams.Confluent.Aspire;
@@ -19,26 +110,29 @@ silo.AddKafkaStreamProviderFromConfiguration(
     sectionPath: "Orleans:Streams:Kafka");
 ```
 
-Expected configuration keys:
+Client usage:
 
-- `BootstrapServers`
-- `TopicName`
-- `PartitionCount`
-- `ReplicationFactor`
-- `CreateTopicIfMissing`
+```csharp
+using Orleans.Streams.Confluent.Aspire;
 
-## Aspire AppHost Orleans Resource Modeling
+hostBuilder.UseOrleansClient(client =>
+{
+    client.AddKafkaStreamProviderFromConfiguration(
+        providerName: "kafka",
+        configuration: hostContext.Configuration);
+});
+```
 
-This repository now also includes an AppHost-facing modeling project at `src/Orleans.Streams.Confluent.Aspire.Hosting`.
+The adapter prefers provider-scoped configuration (`Orleans:Streams:Kafka:{providerName}`) and falls back to `Orleans:Streams:Kafka`.
 
-It adds `WithKafkaStreamProvider(...)` extensions for the Orleans resource created by `builder.AddOrleans("default")`.
+### AppHost Modeling (`Orleans.Streams.Confluent.Aspire.Hosting`)
 
-### AppHost Usage
+Use this package in the AppHost project to model Kafka stream provider settings on the Orleans resource.
+
+Bootstrap servers example:
 
 ```csharp
 using Orleans.Streams.Confluent.Aspire.Hosting;
-
-var builder = DistributedApplication.CreateBuilder(args);
 
 var orleans = builder
     .AddOrleans("default")
@@ -51,25 +145,54 @@ var orleans = builder
         createTopicIfMissing: false);
 ```
 
-The AppHost extension emits provider-scoped Orleans configuration keys under:
+Connection string example:
 
+```csharp
+var orleans = builder
+    .AddOrleans("default")
+    .WithKafkaStreamProviderConnectionString(
+        providerName: "kafka",
+        connectionString: "bootstrap.servers=host1:9092,host2:9092;security.protocol=SASL_SSL;sasl.mechanism=PLAIN;sasl.username=key;sasl.password=secret",
+        topicName: "orders-topic");
+```
+
+Kafka resource wiring example:
+
+```csharp
+using Aspire.Hosting;
+using Orleans.Streams.Confluent.Aspire.Hosting;
+
+var kafka = builder.AddKafka("kafka");
+
+var orleans = builder
+    .AddOrleans("default")
+    .WithKafkaStreamProvider(
+        providerName: "kafka",
+        kafkaResource: kafka,
+        topicName: "orders-topic");
+```
+
+Existing connection-string resource example:
+
+```csharp
+using Aspire.Hosting;
+using Orleans.Streams.Confluent.Aspire.Hosting;
+
+var confluent = builder.AddConnectionString("confluent-bootstrap");
+
+var orleans = builder
+    .AddOrleans("default")
+    .WithKafkaStreamProvider(
+        providerName: "kafka",
+        kafkaResource: confluent,
+        topicName: "orders-topic");
+```
+
+AppHost emits provider-scoped keys under:
+
+- `Orleans:Streams:Kafka:{providerName}:ConnectionString`
 - `Orleans:Streams:Kafka:{providerName}:BootstrapServers`
 - `Orleans:Streams:Kafka:{providerName}:TopicName`
 - `Orleans:Streams:Kafka:{providerName}:PartitionCount`
 - `Orleans:Streams:Kafka:{providerName}:ReplicationFactor`
 - `Orleans:Streams:Kafka:{providerName}:CreateTopicIfMissing`
-
-The runtime extension `AddKafkaStreamProviderFromConfiguration(...)` now prefers provider-scoped configuration and falls back to legacy `Orleans:Streams:Kafka` keys when provider-scoped keys are not present.
-
-It is available for both Orleans silo projects and Orleans client projects:
-
-```csharp
-using Orleans.Streams.Confluent.Aspire;
-
-hostBuilder.UseOrleansClient(client =>
-{
-    client.AddKafkaStreamProviderFromConfiguration(
-        providerName: "kafka",
-        configuration: hostContext.Configuration);
-});
-```

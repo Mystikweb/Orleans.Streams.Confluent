@@ -6,9 +6,14 @@
 public sealed class KafkaStreamProviderResourceOptions
 {
     /// <summary>
+    /// Gets or sets a semicolon-delimited Kafka client connection string.
+    /// </summary>
+    public string? ConnectionString { get; init; }
+
+    /// <summary>
     /// Gets or sets the Kafka bootstrap servers.
     /// </summary>
-    public required string BootstrapServers { get; init; }
+    public string? BootstrapServers { get; init; }
 
     /// <summary>
     /// Gets or sets the topic name used by the provider.

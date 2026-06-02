@@ -46,9 +46,9 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory
             throw new ArgumentException("Kafka topic name must be configured.", nameof(options));
         }
 
-        if (string.IsNullOrWhiteSpace(_options.BootstrapServers))
+        if (string.IsNullOrWhiteSpace(KafkaClientConfigurationBuilder.ResolveBootstrapServers(_options)))
         {
-            throw new ArgumentException("Kafka bootstrap servers must be configured.", nameof(options));
+            throw new ArgumentException("Kafka bootstrap servers must be configured via BootstrapServers or ConnectionString.", nameof(options));
         }
 
 
@@ -97,10 +97,7 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory
         try
         {
             LogDebugEnsuringTopic(_providerName, _options.TopicName, _options.PartitionCount);
-            _adminClient ??= new AdminClientBuilder(new AdminClientConfig
-            {
-                BootstrapServers = _options.BootstrapServers
-            }).Build();
+            _adminClient ??= new AdminClientBuilder(KafkaClientConfigurationBuilder.CreateAdminClientConfig(_options)).Build();
 
             var metadata = _adminClient.GetMetadata(TimeSpan.FromSeconds(5));
             var existingTopic = metadata.Topics.FirstOrDefault(topic => topic.Topic == _options.TopicName && topic.Error.IsError is false);

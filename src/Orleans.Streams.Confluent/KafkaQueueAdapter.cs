@@ -54,13 +54,7 @@ internal sealed partial class KafkaQueueAdapter(
             var queueId = streamQueueMapper.GetQueueForStream(streamId);
             LogDebugQueueingMessageBatch(streamId, queueId, options.TopicName);
 
-            var producerConfig = new ProducerConfig
-            {
-                BootstrapServers = options.BootstrapServers,
-                Acks = Acks.All,
-                EnableIdempotence = true,
-                AllowAutoCreateTopics = false
-            };
+            var producerConfig = KafkaClientConfigurationBuilder.CreateProducerConfig(options);
 
             using var producer = new ProducerBuilder<Null, byte[]>(producerConfig).Build();
             var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, requestContext, options.TopicName, (int)queueId.GetNumericId(), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());

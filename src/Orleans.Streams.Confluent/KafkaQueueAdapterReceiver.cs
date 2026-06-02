@@ -18,14 +18,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
             var consumerGroup = $"{providerName}-{queueId.GetNumericId()}";
             LogDebugInitializingReceiver(queueId, options.TopicName, consumerGroup);
 
-            var consumerConfig = new ConsumerConfig
-            {
-                BootstrapServers = options.BootstrapServers,
-                GroupId = consumerGroup,
-                EnableAutoCommit = false,
-                AutoOffsetReset = AutoOffsetReset.Latest,
-                AllowAutoCreateTopics = false
-            };
+            var consumerConfig = KafkaClientConfigurationBuilder.CreateConsumerConfig(options, consumerGroup);
 
             _consumer = new ConsumerBuilder<Ignore, byte[]>(consumerConfig).Build();
             var topicPartition = new TopicPartition(options.TopicName, new Partition((int)queueId.GetNumericId()));

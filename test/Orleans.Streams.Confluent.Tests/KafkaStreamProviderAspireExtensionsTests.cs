@@ -93,6 +93,43 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
     }
 
     [TestMethod]
+    public void AddKafkaStreamProviderFromConfiguration_WhenConnectionStringConfigured_BindsConnectionString()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Orleans:Streams:Kafka:ConnectionString"] = "bootstrap.servers=localhost:9092;security.protocol=SASL_SSL;sasl.mechanism=PLAIN;sasl.username=key;sasl.password=secret",
+                ["Orleans:Streams:Kafka:TopicName"] = "orders-topic",
+                ["Orleans:Streams:Kafka:PartitionCount"] = "12",
+                ["Orleans:Streams:Kafka:ReplicationFactor"] = "2",
+                ["Orleans:Streams:Kafka:CreateTopicIfMissing"] = "false"
+            })
+            .Build();
+
+        using var host = new HostBuilder()
+            .UseOrleans(silo =>
+            {
+                silo.UseLocalhostClustering();
+                silo.Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = Guid.NewGuid().ToString("N");
+                    options.ServiceId = Guid.NewGuid().ToString("N");
+                });
+                silo.AddKafkaStreamProviderFromConfiguration(providerName: "kafka", configuration: configuration);
+            })
+            .Build();
+
+        var optionsMonitor = host.Services.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>();
+        var options = optionsMonitor.Get("kafka");
+
+        options.ConnectionString.Should().Contain("bootstrap.servers=localhost:9092");
+        options.TopicName.Should().Be("orders-topic");
+        options.PartitionCount.Should().Be(12);
+        options.ReplicationFactor.Should().Be(2);
+        options.CreateTopicIfMissing.Should().BeFalse();
+    }
+
+    [TestMethod]
     public void AddKafkaStreamProviderFromConfiguration_OnClientBuilder_BindsNamedOptions()
     {
         var configuration = new ConfigurationBuilder()
@@ -123,5 +160,36 @@ public sealed class KafkaStreamProviderAspireExtensionsTests
         options.ReplicationFactor.Should().Be(2);
         options.CreateTopicIfMissing.Should().BeFalse();
         factory.GetStreamQueueMapper().Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public void AddKafkaStreamProviderFromConfiguration_OnClientBuilder_WhenConnectionStringConfigured_BindsConnectionString()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Orleans:Streams:Kafka:ConnectionString"] = "bootstrap.servers=localhost:9092;security.protocol=SASL_SSL;sasl.mechanism=PLAIN;sasl.username=key;sasl.password=secret",
+                ["Orleans:Streams:Kafka:TopicName"] = "orders-topic",
+                ["Orleans:Streams:Kafka:PartitionCount"] = "12",
+                ["Orleans:Streams:Kafka:ReplicationFactor"] = "2",
+                ["Orleans:Streams:Kafka:CreateTopicIfMissing"] = "false"
+            })
+            .Build();
+
+        using var host = new HostBuilder()
+            .UseOrleansClient(client =>
+            {
+                client.AddKafkaStreamProviderFromConfiguration(providerName: "kafka", configuration: configuration);
+            })
+            .Build();
+
+        var optionsMonitor = host.Services.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>();
+        var options = optionsMonitor.Get("kafka");
+
+        options.ConnectionString.Should().Contain("bootstrap.servers=localhost:9092");
+        options.TopicName.Should().Be("orders-topic");
+        options.PartitionCount.Should().Be(12);
+        options.ReplicationFactor.Should().Be(2);
+        options.CreateTopicIfMissing.Should().BeFalse();
     }
 }

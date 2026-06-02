@@ -8,7 +8,15 @@ namespace Orleans.Streams.Confluent;
 public sealed class KafkaStreamProviderOptions
 {
     /// <summary>
+    /// Gets or sets a semicolon-delimited Kafka client connection string.
+    /// Expected format is key-value pairs like:
+    /// bootstrap.servers=host:9092;security.protocol=SASL_SSL;sasl.mechanism=PLAIN
+    /// </summary>
+    public string ConnectionString { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the Kafka bootstrap servers.
+    /// This value overrides bootstrap.servers from <see cref="ConnectionString"/> when both are provided.
     /// </summary>
     public string BootstrapServers { get; set; } = string.Empty;
 

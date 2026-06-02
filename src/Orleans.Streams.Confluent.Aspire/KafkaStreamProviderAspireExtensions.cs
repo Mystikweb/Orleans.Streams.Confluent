@@ -141,6 +141,12 @@ public static class KafkaStreamProviderAspireExtensions
 
     private static void ApplyConfiguration(KafkaStreamProviderOptions options, IConfiguration configuration)
     {
+        var connectionString = configuration[nameof(KafkaStreamProviderOptions.ConnectionString)];
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            options.ConnectionString = connectionString;
+        }
+
         var bootstrapServers = configuration[nameof(KafkaStreamProviderOptions.BootstrapServers)];
         if (!string.IsNullOrWhiteSpace(bootstrapServers))
         {

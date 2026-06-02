@@ -12,6 +12,26 @@ namespace Orleans.Streams.Confluent.Aspire.Hosting;
 /// </summary>
 internal sealed class KafkaStreamProviderConfiguration(KafkaStreamProviderResourceOptions options) : IProviderConfiguration
 {
+    private readonly ReferenceExpression? _connectionStringExpression;
+
+    internal KafkaStreamProviderConfiguration(
+        ReferenceExpression connectionStringExpression,
+        string topicName,
+        int? partitionCount,
+        short? replicationFactor,
+        bool? createTopicIfMissing)
+        : this(new KafkaStreamProviderResourceOptions
+        {
+            ConnectionString = string.Empty,
+            TopicName = topicName,
+            PartitionCount = partitionCount,
+            ReplicationFactor = replicationFactor,
+            CreateTopicIfMissing = createTopicIfMissing
+        })
+    {
+        _connectionStringExpression = connectionStringExpression;
+    }
+
     /// <inheritdoc />
     void IProviderConfiguration.ConfigureResource<T>(IResourceBuilder<T> resourceBuilder, string configSectionPath)
     {
@@ -20,7 +40,20 @@ internal sealed class KafkaStreamProviderConfiguration(KafkaStreamProviderResour
         // convention so .NET configuration picks them up under Orleans:Streams:Kafka:{providerName}.
         var prefix = configSectionPath.Replace(":", "__", StringComparison.Ordinal) + "__";
 
-        resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.BootstrapServers), options.BootstrapServers);
+        if (_connectionStringExpression is not null)
+        {
+            resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.ConnectionString), _connectionStringExpression);
+        }
+        else if (!string.IsNullOrWhiteSpace(options.ConnectionString))
+        {
+            resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.ConnectionString), options.ConnectionString);
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.BootstrapServers))
+        {
+            resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.BootstrapServers), options.BootstrapServers);
+        }
+
         resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.TopicName), options.TopicName);
 
         if (options.PartitionCount.HasValue)
