@@ -40,7 +40,7 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         _logger = _loggerFactory.CreateLogger<KafkaQueueAdapterFactory>();
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
-        queueMapperOptions = queueMapperOptions ?? throw new ArgumentNullException(nameof(queueMapperOptions));
+        _ = queueMapperOptions ?? throw new ArgumentNullException(nameof(queueMapperOptions));
 
         if (string.IsNullOrWhiteSpace(_options.TopicName))
         {
@@ -62,9 +62,12 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
             throw new ArgumentOutOfRangeException(nameof(options), _options.ReplicationFactor, "Kafka ReplicationFactor must be greater than zero.");
         }
 
+        var mapperOptions = new HashRingStreamQueueMapperOptions
+        {
+            TotalQueueCount = _options.PartitionCount
+        };
 
-        queueMapperOptions.TotalQueueCount = _options.PartitionCount;
-        _streamQueueMapper = new HashRingBasedStreamQueueMapper(queueMapperOptions, _providerName);
+        _streamQueueMapper = new HashRingBasedStreamQueueMapper(mapperOptions, _providerName);
         _adapterCache = new SimpleQueueAdapterCache(cacheOptions ?? throw new ArgumentNullException(nameof(cacheOptions)), _providerName, loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory)));
         _producer = new Lazy<IProducer<Null, byte[]>>(
             () => new ProducerBuilder<Null, byte[]>(KafkaClientConfigurationBuilder.CreateProducerConfig(_options)).Build(),

@@ -3,8 +3,10 @@ using Confluent.Kafka.Admin;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Orleans;
+using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.Streams.Common;
 using Orleans.Serialization;
@@ -47,7 +49,7 @@ public sealed class KafkaStreamProviderIntegrationTests
             })
             .Build();
 
-        var factory = host.Services.GetServices<IQueueAdapterFactory>().OfType<KafkaQueueAdapterFactory>().Single();
+        var factory = CreateFactory(host.Services, providerName);
         var adapter = await factory.CreateAdapter();
         var serializer = host.Services.GetRequiredService<Serializer<KafkaBatchContainer>>();
         using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = kafka.GetBootstrapAddress() }).Build();
@@ -111,7 +113,7 @@ public sealed class KafkaStreamProviderIntegrationTests
             })
             .Build();
 
-        var factory = host.Services.GetServices<IQueueAdapterFactory>().OfType<KafkaQueueAdapterFactory>().Single();
+        var factory = CreateFactory(host.Services, providerName);
         var adapter = await factory.CreateAdapter();
         using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = kafka.GetBootstrapAddress() }).Build();
         var topicMetadata = await WaitForTopicAsync(adminClient, topicName, partitionCount);
@@ -194,5 +196,15 @@ public sealed class KafkaStreamProviderIntegrationTests
 
         Assert.Fail("Kafka receiver did not observe any batches before the timeout elapsed.");
         return null!;
+    }
+
+    private static KafkaQueueAdapterFactory CreateFactory(IServiceProvider serviceProvider, string providerName)
+    {
+        var options = serviceProvider.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>().Get(providerName);
+        var queueMapperOptions = serviceProvider.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get(providerName);
+        var cacheOptions = serviceProvider.GetRequiredService<IOptionsMonitor<SimpleQueueCacheOptions>>().Get(providerName);
+        var loggerFactory = serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>();
+        var serializer = serviceProvider.GetRequiredService<Serializer<KafkaBatchContainer>>();
+        return new KafkaQueueAdapterFactory(providerName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer);
     }
 }

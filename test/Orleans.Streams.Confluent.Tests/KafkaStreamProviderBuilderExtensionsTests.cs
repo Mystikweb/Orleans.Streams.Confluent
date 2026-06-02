@@ -1,12 +1,14 @@
 ﻿using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.Streams.Common;
+using Orleans.Serialization;
 
 namespace Orleans.Streams.Confluent.Tests;
 
@@ -36,7 +38,7 @@ public sealed class KafkaStreamProviderBuilderExtensionsTests
             })
             .Build();
 
-        Action act = () => host.Services.GetServices<IQueueAdapterFactory>().OfType<KafkaQueueAdapterFactory>().Single();
+        Action act = () => CreateFactory(host.Services, "kafka");
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
@@ -64,7 +66,7 @@ public sealed class KafkaStreamProviderBuilderExtensionsTests
             })
             .Build();
 
-        Action act = () => host.Services.GetServices<IQueueAdapterFactory>().OfType<KafkaQueueAdapterFactory>().Single();
+        Action act = () => CreateFactory(host.Services, "kafka");
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
@@ -155,5 +157,15 @@ public sealed class KafkaStreamProviderBuilderExtensionsTests
         options.TopicName.Should().Be("orders-topic");
         options.CreateTopicIfMissing.Should().BeFalse();
         options.PartitionCount.Should().Be(6);
+    }
+
+    private static KafkaQueueAdapterFactory CreateFactory(IServiceProvider serviceProvider, string providerName)
+    {
+        var options = serviceProvider.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>().Get(providerName);
+        var queueMapperOptions = serviceProvider.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get(providerName);
+        var cacheOptions = serviceProvider.GetRequiredService<IOptionsMonitor<SimpleQueueCacheOptions>>().Get(providerName);
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var serializer = serviceProvider.GetRequiredService<Serializer<KafkaBatchContainer>>();
+        return new KafkaQueueAdapterFactory(providerName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer);
     }
 }

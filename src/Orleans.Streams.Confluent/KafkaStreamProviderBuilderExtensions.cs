@@ -31,8 +31,6 @@ public static class KafkaStreamProviderBuilderExtensions
             configureOptions?.Invoke(options);
         });
 
-        builder.Services.AddSingleton<IQueueAdapterFactory>(serviceProvider => CreateQueueAdapterFactory(serviceProvider, providerName));
-
         builder.AddPersistentStreams(providerName, CreateQueueAdapterFactory, _ =>
         {
         });

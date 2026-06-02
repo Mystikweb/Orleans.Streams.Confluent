@@ -30,7 +30,7 @@ public static class KafkaStreamProviderAspireExtensions
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
 
-        if (string.Equals(sectionPath, "Orleans:Streams:Kafka", StringComparison.Ordinal))
+        if (string.Equals(sectionPath, "Orleans:Streams:Kafka", StringComparison.OrdinalIgnoreCase))
         {
             var providerScopedSection = configuration.GetSection($"Orleans:Streams:Kafka:{providerName}");
             if (SectionHasValues(providerScopedSection))
@@ -56,7 +56,7 @@ public static class KafkaStreamProviderAspireExtensions
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
 
-        if (string.Equals(sectionPath, "Orleans:Streams:Kafka", StringComparison.Ordinal))
+        if (string.Equals(sectionPath, "Orleans:Streams:Kafka", StringComparison.OrdinalIgnoreCase))
         {
             var providerScopedSection = configuration.GetSection($"Orleans:Streams:Kafka:{providerName}");
             if (SectionHasValues(providerScopedSection))
@@ -136,9 +136,6 @@ public static class KafkaStreamProviderAspireExtensions
             options.PartitionCount = partitionCount;
             configureOptions.Invoke(options);
         });
-
-        services.AddSingleton<IQueueAdapterFactory>(serviceProvider => CreateQueueAdapterFactory(serviceProvider, providerName));
-
     }
 
     private static IQueueAdapterFactory CreateQueueAdapterFactory(IServiceProvider serviceProvider, string streamProviderName)
