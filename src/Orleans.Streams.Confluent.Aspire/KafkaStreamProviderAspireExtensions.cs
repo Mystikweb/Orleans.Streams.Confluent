@@ -27,7 +27,7 @@ public static class KafkaStreamProviderAspireExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentNullException.ThrowIfNull(configuration);
-        ArgumentNullException.ThrowIfNull(providerName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
 
         if (string.Equals(sectionPath, "Orleans:Streams:Kafka", StringComparison.Ordinal))
         {
@@ -53,7 +53,7 @@ public static class KafkaStreamProviderAspireExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentNullException.ThrowIfNull(configuration);
-        ArgumentNullException.ThrowIfNull(providerName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
 
         if (string.Equals(sectionPath, "Orleans:Streams:Kafka", StringComparison.Ordinal))
         {
@@ -77,7 +77,7 @@ public static class KafkaStreamProviderAspireExtensions
         int partitionCount = HashRingStreamQueueMapperOptions.DEFAULT_NUM_QUEUES)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(providerName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
         ArgumentNullException.ThrowIfNull(configurationSection);
 
         RegisterKafkaStreamProvider(
@@ -99,7 +99,7 @@ public static class KafkaStreamProviderAspireExtensions
         int partitionCount = HashRingStreamQueueMapperOptions.DEFAULT_NUM_QUEUES)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(providerName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
         ArgumentNullException.ThrowIfNull(configurationSection);
 
         RegisterKafkaStreamProvider(

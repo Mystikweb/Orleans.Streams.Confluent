@@ -17,7 +17,7 @@ public static class KafkaStreamProviderBuilderExtensions
     public static ISiloBuilder AddKafkaStreamProvider(this ISiloBuilder builder, string providerName, Action<KafkaStreamProviderOptions>? configureOptions = null, int partitionCount = HashRingStreamQueueMapperOptions.DEFAULT_NUM_QUEUES)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(providerName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
 
         builder.Services.AddOptions<KafkaStreamProviderOptions>(providerName).Configure(options =>
         {

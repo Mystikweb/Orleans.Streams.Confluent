@@ -14,6 +14,28 @@ namespace Orleans.Streams.Confluent.Tests;
 public sealed class KafkaStreamProviderBuilderExtensionsTests
 {
     [TestMethod]
+    public void AddKafkaStreamProvider_WhenProviderNameIsWhitespace_ThrowsArgumentException()
+    {
+        Action act = () =>
+        {
+            using var _ = new HostBuilder()
+                .UseOrleans(silo =>
+                {
+                    silo.UseLocalhostClustering();
+                    silo.Configure<ClusterOptions>(options =>
+                    {
+                        options.ClusterId = Guid.NewGuid().ToString("N");
+                        options.ServiceId = Guid.NewGuid().ToString("N");
+                    });
+                    silo.AddKafkaStreamProvider(" ");
+                })
+                .Build();
+        };
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [TestMethod]
     public void AddKafkaStreamProvider_WhenConfigured_RegistersFactoryAndNamedOptions()
     {
         using var host = new HostBuilder()

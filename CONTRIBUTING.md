@@ -4,8 +4,8 @@ Thanks for contributing to Orleans.Streams.Confluent.
 
 ## Before you open an issue
 
-1. Read the usage guidance in README.
-2. Check release and versioning behavior in VERSIONING.
+1. Read the usage guidance in README.md.
+2. Check release and versioning behavior in VERSIONING.md.
 3. Search existing issues for duplicates.
 
 ## Issue intake model

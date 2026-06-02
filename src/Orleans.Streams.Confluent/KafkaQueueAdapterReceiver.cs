@@ -9,6 +9,7 @@ namespace Orleans.Streams.Confluent;
 /// </summary>
 internal sealed partial class KafkaQueueAdapterReceiver(string providerName, KafkaStreamProviderOptions options, Serializer<KafkaBatchContainer> serializer, ILogger logger, QueueId queueId) : IQueueAdapterReceiver
 {
+    private readonly ILogger _logger = logger;
     private IConsumer<Ignore, byte[]>? _consumer;
 
     public Task Initialize(TimeSpan timeout)
@@ -22,8 +23,8 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
 
             _consumer = new ConsumerBuilder<Ignore, byte[]>(consumerConfig).Build();
             var topicPartition = new TopicPartition(options.TopicName, new Partition((int)queueId.GetNumericId()));
-            var watermarkOffsets = _consumer.QueryWatermarkOffsets(topicPartition, timeout);
-            _consumer.Assign(new TopicPartitionOffset(topicPartition, watermarkOffsets.High));
+            var startingOffset = ResolveStartingOffset(topicPartition, timeout, consumerConfig.AutoOffsetReset);
+            _consumer.Assign(new TopicPartitionOffset(topicPartition, startingOffset));
             LogDebugReceiverAssigned(queueId, options.TopicName, queueId.GetNumericId());
             return Task.CompletedTask;
         }
@@ -105,6 +106,23 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
             LogErrorShutdownFailed(queueId, ex);
             throw;
         }
+    }
+
+    private Offset ResolveStartingOffset(TopicPartition topicPartition, TimeSpan timeout, AutoOffsetReset? autoOffsetReset)
+    {
+        var committedOffset = _consumer!.Committed([topicPartition], timeout)[0].Offset;
+        if (committedOffset.Value >= 0)
+        {
+            return committedOffset;
+        }
+
+        var watermarkOffsets = _consumer.QueryWatermarkOffsets(topicPartition, timeout);
+
+        return autoOffsetReset switch
+        {
+            AutoOffsetReset.Earliest => watermarkOffsets.Low,
+            _ => watermarkOffsets.High
+        };
     }
 
     [LoggerMessage(

@@ -57,11 +57,13 @@ internal sealed partial class KafkaQueueAdapter(
             var producerConfig = KafkaClientConfigurationBuilder.CreateProducerConfig(options);
 
             using var producer = new ProducerBuilder<Null, byte[]>(producerConfig).Build();
-            var sequenceNumber = token is Providers.Streams.Common.EventSequenceTokenV2 eventToken
-                ? eventToken.SequenceNumber
-                : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-            var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, requestContext, options.TopicName, (int)queueId.GetNumericId(), sequenceNumber);
+            if (token is not Providers.Streams.Common.EventSequenceTokenV2 eventToken)
+            {
+                throw new ArgumentException("StreamSequenceToken must be an EventSequenceTokenV2 to ensure monotonic sequence numbers", nameof(token));
+            }
+
+            var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, requestContext, options.TopicName, (int)queueId.GetNumericId(), eventToken.SequenceNumber);
             await producer.ProduceAsync(new TopicPartition(options.TopicName, new Partition((int)queueId.GetNumericId())), new Message<Null, byte[]> { Value = payload }).ConfigureAwait(false);
             LogDebugQueuedMessageBatch(streamId, queueId, options.TopicName);
         }
