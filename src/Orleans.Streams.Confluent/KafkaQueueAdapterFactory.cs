@@ -162,6 +162,13 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
         throw new TimeoutException($"Kafka topic '{topicName}' was not fully provisioned with {partitionCount} partition(s) before the timeout elapsed.");
     }
 
+    public ValueTask DisposeAsync()
+    {
+        _adminClient?.Dispose();
+        _initializationLock.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
     [LoggerMessage(
         EventId = 1,
         Level = LogLevel.Debug,
