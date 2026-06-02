@@ -1,0 +1,3 @@
+<Solution>
+    <Project Path="src/Orleans.Streams.Confluent/Orleans.Streams.Confluent.csproj" />
+</Solution>
