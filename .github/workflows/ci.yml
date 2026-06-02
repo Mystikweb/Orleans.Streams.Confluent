@@ -29,3 +29,6 @@ jobs:
 
       - name: Test (unit)
         run: dotnet test test/Orleans.Streams.Confluent.Tests/Orleans.Streams.Confluent.Tests.csproj --configuration Release --no-build --nologo
+
+      - name: Test (integration)
+        run: dotnet test test/Orleans.Streams.Confluent.IntegrationTests/Orleans.Streams.Confluent.IntegrationTests.csproj --configuration Release --no-build --nologo
