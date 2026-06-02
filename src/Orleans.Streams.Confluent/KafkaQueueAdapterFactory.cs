@@ -10,7 +10,7 @@ namespace Orleans.Streams.Confluent;
 /// <summary>
 /// Factory for Kafka-backed Orleans queue adapters.
 /// </summary>
-public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory
+public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAsyncDisposable
 {
     private readonly string _providerName;
     private readonly KafkaStreamProviderOptions _options;
