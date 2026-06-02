@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Configuration;
+using Orleans.Hosting;
+using Orleans.Providers.Streams.Common;
 using Orleans.Serialization;
 using Orleans.Streams;
 
@@ -26,17 +28,48 @@ public static class KafkaStreamProviderBuilderExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(partitionCount, 0);
 
-        builder.Services.AddOptions<KafkaStreamProviderOptions>(providerName).Configure(options =>
-        {
-            options.PartitionCount = partitionCount;
-            configureOptions?.Invoke(options);
-        });
-
+        RegisterKafkaStreamProvider(builder.Services, providerName, configureOptions, partitionCount);
         builder.AddPersistentStreams(providerName, CreateQueueAdapterFactory, _ =>
         {
         });
 
         return builder;
+    }
+
+    /// <summary>
+    /// Registers the Kafka stream provider infrastructure and options.
+    /// </summary>
+    /// <param name="builder">The Orleans client builder.</param>
+    /// <param name="providerName">The logical stream provider name used for named options and stream provider resolution.</param>
+    /// <param name="configureOptions">Optional callback to configure Kafka provider options.</param>
+    /// <param name="partitionCount">The default partition count assigned before <paramref name="configureOptions"/> runs.</param>
+    /// <returns>The updated client builder.</returns>
+    public static IClientBuilder AddKafkaStreamProvider(this IClientBuilder builder, string providerName, Action<KafkaStreamProviderOptions>? configureOptions = null, int partitionCount = HashRingStreamQueueMapperOptions.DEFAULT_NUM_QUEUES)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(partitionCount, 0);
+
+        RegisterKafkaStreamProvider(builder.Services, providerName, configureOptions, partitionCount);
+        builder.AddPersistentStreams(providerName, CreateQueueAdapterFactory, _ =>
+        {
+        });
+
+        return builder;
+    }
+
+    private static void RegisterKafkaStreamProvider(IServiceCollection services, string providerName, Action<KafkaStreamProviderOptions>? configureOptions, int partitionCount)
+    {
+        services.AddOptions<KafkaStreamProviderOptions>(providerName).Configure(options =>
+        {
+            options.PartitionCount = partitionCount;
+            configureOptions?.Invoke(options);
+        });
+
+        services.AddOptions<HashRingStreamQueueMapperOptions>(providerName).Configure(options =>
+        {
+            options.TotalQueueCount = partitionCount;
+        });
     }
 
     private static IQueueAdapterFactory CreateQueueAdapterFactory(IServiceProvider serviceProvider, string streamProviderName)

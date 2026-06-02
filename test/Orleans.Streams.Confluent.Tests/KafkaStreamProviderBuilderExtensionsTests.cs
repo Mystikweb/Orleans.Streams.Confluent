@@ -154,6 +154,9 @@ public sealed class KafkaStreamProviderBuilderExtensionsTests
         options.TopicName.Should().Be("orders-topic");
         options.CreateTopicIfMissing.Should().BeFalse();
         options.PartitionCount.Should().Be(6);
+
+        var queueMapperOptions = host.Services.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get("kafka");
+        queueMapperOptions.TotalQueueCount.Should().Be(6);
     }
 
     [TestMethod]
@@ -187,6 +190,39 @@ public sealed class KafkaStreamProviderBuilderExtensionsTests
         options.TopicName.Should().Be("orders-topic");
         options.CreateTopicIfMissing.Should().BeFalse();
         options.PartitionCount.Should().Be(6);
+
+        var queueMapperOptions = host.Services.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get("kafka");
+        queueMapperOptions.TotalQueueCount.Should().Be(6);
+    }
+
+    [TestMethod]
+    public void AddKafkaStreamProvider_OnClientBuilder_WhenConfigured_RegistersFactoryAndNamedOptions()
+    {
+        using var host = new HostBuilder()
+            .UseOrleansClient(client =>
+            {
+                client.AddKafkaStreamProvider(
+                    providerName: "kafka",
+                    configureOptions: options =>
+                    {
+                        options.BootstrapServers = "localhost:9092";
+                        options.TopicName = "orders-topic";
+                        options.CreateTopicIfMissing = false;
+                    },
+                    partitionCount: 6);
+            })
+            .Build();
+
+        var optionsMonitor = host.Services.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>();
+        var options = optionsMonitor.Get("kafka");
+
+        options.BootstrapServers.Should().Be("localhost:9092");
+        options.TopicName.Should().Be("orders-topic");
+        options.CreateTopicIfMissing.Should().BeFalse();
+        options.PartitionCount.Should().Be(6);
+
+        var queueMapperOptions = host.Services.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get("kafka");
+        queueMapperOptions.TotalQueueCount.Should().Be(6);
     }
 
     private static KafkaQueueAdapterFactory CreateFactory(IServiceProvider serviceProvider, string providerName)

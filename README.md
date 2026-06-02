@@ -44,7 +44,7 @@ dotnet add package Orleans.Streams.Confluent.Aspire.Hosting
 ## Packages
 
 - `Orleans.Streams.Confluent`:
-  Core runtime stream provider for Orleans silo/client projects.
+    Core runtime stream provider for Orleans silo/client projects.
 - `Orleans.Streams.Confluent.Aspire`:
   Runtime configuration-binding helpers for Aspire-hosted Orleans projects.
 - `Orleans.Streams.Confluent.Aspire.Hosting`:
@@ -52,7 +52,7 @@ dotnet add package Orleans.Streams.Confluent.Aspire.Hosting
 
 ## Runtime Library
 
-Use the core runtime package when configuring Orleans directly in your silo project.
+Use the core runtime package when configuring Orleans directly in your silo or client project.
 
 ```csharp
 using Orleans.Streams.Confluent;

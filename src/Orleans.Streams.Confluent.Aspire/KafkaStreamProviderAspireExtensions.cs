@@ -165,6 +165,11 @@ public static class KafkaStreamProviderAspireExtensions
             options.PartitionCount = partitionCount;
             configureOptions.Invoke(options);
         });
+
+        services.AddOptions<HashRingStreamQueueMapperOptions>(providerName).Configure(options =>
+        {
+            options.TotalQueueCount = partitionCount;
+        });
     }
 
     private static IQueueAdapterFactory CreateQueueAdapterFactory(IServiceProvider serviceProvider, string streamProviderName)
