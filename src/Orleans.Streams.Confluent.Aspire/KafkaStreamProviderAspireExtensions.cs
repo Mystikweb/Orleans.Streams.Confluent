@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Orleans;
 using Orleans.Configuration;
+using Orleans.Hosting;
 using Orleans.Providers.Streams.Common;
 using Orleans.Streams.Confluent;
 

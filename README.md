@@ -126,7 +126,7 @@ hostBuilder.UseOrleansClient((context, client) =>
 {
     client.AddKafkaStreamProviderFromConfiguration(
         providerName: "kafka",
-    configuration: context.Configuration);
+        configuration: context.Configuration);
 });
 ```
 
