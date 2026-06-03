@@ -63,7 +63,7 @@ public sealed class KafkaStreamProviderIntegrationTests
             streamId,
             new[] { "created" },
             new EventSequenceTokenV2(42),
-            new Dictionary<string, object>());
+            null!);
 
         using var consumer = new ConsumerBuilder<Ignore, byte[]>(new ConsumerConfig
         {

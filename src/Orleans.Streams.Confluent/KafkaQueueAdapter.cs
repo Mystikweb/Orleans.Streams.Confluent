@@ -49,7 +49,9 @@ internal sealed partial class KafkaQueueAdapter(
     public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
     {
         ArgumentNullException.ThrowIfNull(events);
-        ArgumentNullException.ThrowIfNull(requestContext);
+        var effectiveRequestContext = requestContext is null
+            ? new Dictionary<string, object>()
+            : new Dictionary<string, object>(requestContext);
 
         try
         {
@@ -60,7 +62,7 @@ internal sealed partial class KafkaQueueAdapter(
                 ? eventToken.SequenceNumber
                 : 0;
 
-            var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, requestContext, options.TopicName, (int)queueId.GetNumericId(), payloadOffset);
+            var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, effectiveRequestContext, options.TopicName, (int)queueId.GetNumericId(), payloadOffset);
             await producer.ProduceAsync(new TopicPartition(options.TopicName, new Partition((int)queueId.GetNumericId())), new Message<Null, byte[]> { Value = payload }).ConfigureAwait(false);
             LogDebugQueuedMessageBatch(streamId, queueId, options.TopicName);
         }
