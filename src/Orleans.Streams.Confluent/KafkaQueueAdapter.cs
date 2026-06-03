@@ -49,7 +49,6 @@ internal sealed partial class KafkaQueueAdapter(
     public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
     {
         ArgumentNullException.ThrowIfNull(events);
-        ArgumentNullException.ThrowIfNull(token);
         ArgumentNullException.ThrowIfNull(requestContext);
 
         try
@@ -57,12 +56,11 @@ internal sealed partial class KafkaQueueAdapter(
             var queueId = streamQueueMapper.GetQueueForStream(streamId);
             LogDebugQueueingMessageBatch(streamId, queueId, options.TopicName);
 
-            if (token is not Providers.Streams.Common.EventSequenceTokenV2 eventToken)
-            {
-                throw new ArgumentException("StreamSequenceToken must be an EventSequenceTokenV2 to ensure monotonic sequence numbers", nameof(token));
-            }
+            var payloadOffset = token is Providers.Streams.Common.EventSequenceTokenV2 eventToken
+                ? eventToken.SequenceNumber
+                : 0;
 
-            var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, requestContext, options.TopicName, (int)queueId.GetNumericId(), eventToken.SequenceNumber);
+            var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, requestContext, options.TopicName, (int)queueId.GetNumericId(), payloadOffset);
             await producer.ProduceAsync(new TopicPartition(options.TopicName, new Partition((int)queueId.GetNumericId())), new Message<Null, byte[]> { Value = payload }).ConfigureAwait(false);
             LogDebugQueuedMessageBatch(streamId, queueId, options.TopicName);
         }

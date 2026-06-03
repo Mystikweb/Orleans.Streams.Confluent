@@ -62,7 +62,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         await adapter.QueueMessageBatchAsync(
             streamId,
             new[] { "created" },
-            new EventSequenceTokenV2(0),
+            null!,
             new Dictionary<string, object>());
 
         using var consumer = new ConsumerBuilder<Ignore, byte[]>(new ConsumerConfig
