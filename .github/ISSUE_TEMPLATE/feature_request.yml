@@ -1,0 +1,66 @@
+name: Feature request
+description: Suggest an improvement or new capability
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the problem and proposed solution clearly. Well-scoped requests are easier to prioritize.
+
+  - type: checkboxes
+    id: precheck
+    attributes:
+      label: Pre-check
+      options:
+        - label: I searched existing issues and discussions for similar requests.
+          required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Core runtime (Orleans.Streams.Confluent)
+        - Aspire runtime adapter (Orleans.Streams.Confluent.Aspire)
+        - Aspire AppHost modeling (Orleans.Streams.Confluent.Aspire.Hosting)
+        - Tooling or workflows
+        - Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem are you trying to solve?
+      placeholder: Describe the current pain point.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the API or behavior you want.
+      placeholder: Include rough API shape or usage snippet if possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: What alternatives did you evaluate?
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Expected impact
+      description: Who benefits and why this matters.
+
+  - type: textarea
+    id: breaking-change
+    attributes:
+      label: Breaking change considerations
+      description: If applicable, describe compatibility impact and migration path.

@@ -1,0 +1,107 @@
+﻿using System.Collections.Concurrent;
+using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
+using Orleans;
+using Orleans.Configuration;
+using Orleans.Serialization;
+using Orleans.Streams;
+
+namespace Orleans.Streams.Confluent;
+
+/// <summary>
+/// A Kafka-backed Orleans queue adapter.
+/// </summary>
+internal sealed partial class KafkaQueueAdapter(
+    string providerName,
+    KafkaStreamProviderOptions options,
+    Serializer<KafkaBatchContainer> serializer,
+    ILoggerFactory loggerFactory,
+    HashRingBasedStreamQueueMapper streamQueueMapper,
+    IProducer<Null, byte[]> producer,
+    string consumerGroupPrefix) : IQueueAdapter
+{
+    private readonly ConcurrentDictionary<QueueId, Lazy<KafkaQueueAdapterReceiver>> _receivers = new();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<KafkaQueueAdapter>();
+    private static readonly Dictionary<string, object> EmptyRequestContext = new();
+
+    public string Name => providerName;
+
+    public bool IsRewindable => false;
+
+    public StreamProviderDirection Direction => StreamProviderDirection.ReadWrite;
+
+    public IQueueAdapterReceiver CreateReceiver(QueueId queueId)
+    {
+        var lazyReceiver = new Lazy<KafkaQueueAdapterReceiver>(
+            () => CreateReceiverForQueue(queueId),
+            LazyThreadSafetyMode.ExecutionAndPublication);
+
+        if (_receivers.TryAdd(queueId, lazyReceiver))
+        {
+            LogDebugReceiverCreated(queueId);
+            return lazyReceiver.Value;
+        }
+
+        LogDebugReceiverReused(queueId);
+
+        return _receivers[queueId].Value;
+    }
+
+    public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+        var effectiveRequestContext = requestContext ?? EmptyRequestContext;
+
+        try
+        {
+            var queueId = streamQueueMapper.GetQueueForStream(streamId);
+            LogDebugQueueingMessageBatch(streamId, queueId, options.TopicName);
+
+            var payloadOffset = token is Providers.Streams.Common.EventSequenceTokenV2 eventToken
+                ? eventToken.SequenceNumber
+                : 0;
+
+            var payload = KafkaBatchContainer.ToPayload(serializer, streamId, events, effectiveRequestContext, options.TopicName, (int)queueId.GetNumericId(), payloadOffset);
+            await producer.ProduceAsync(new TopicPartition(options.TopicName, new Partition((int)queueId.GetNumericId())), new Message<Null, byte[]> { Value = payload }).ConfigureAwait(false);
+            LogDebugQueuedMessageBatch(streamId, queueId, options.TopicName);
+        }
+        catch (Exception ex)
+        {
+            LogErrorQueueingMessageBatchFailed(streamId, options.TopicName, ex);
+            throw;
+        }
+    }
+
+    private KafkaQueueAdapterReceiver CreateReceiverForQueue(QueueId queueId)
+        => new(providerName, options, serializer, loggerFactory.CreateLogger<KafkaQueueAdapterReceiver>(), queueId, consumerGroupPrefix);
+
+    [LoggerMessage(
+        EventId = 1,
+        Level = LogLevel.Debug,
+        Message = "Created Kafka receiver for queue {QueueId}")]
+    private partial void LogDebugReceiverCreated(QueueId queueId);
+
+    [LoggerMessage(
+        EventId = 2,
+        Level = LogLevel.Debug,
+        Message = "Reusing existing Kafka receiver for queue {QueueId}")]
+    private partial void LogDebugReceiverReused(QueueId queueId);
+
+    [LoggerMessage(
+        EventId = 3,
+        Level = LogLevel.Debug,
+        Message = "Queueing Kafka batch for stream {StreamId} to queue {QueueId} on topic {TopicName}")]
+    private partial void LogDebugQueueingMessageBatch(StreamId streamId, QueueId queueId, string topicName);
+
+    [LoggerMessage(
+        EventId = 4,
+        Level = LogLevel.Debug,
+        Message = "Queued Kafka batch for stream {StreamId} to queue {QueueId} on topic {TopicName}")]
+    private partial void LogDebugQueuedMessageBatch(StreamId streamId, QueueId queueId, string topicName);
+
+    [LoggerMessage(
+        EventId = 5,
+        Level = LogLevel.Error,
+        Message = "Failed to queue Kafka batch for stream {StreamId} on topic {TopicName}")]
+    private partial void LogErrorQueueingMessageBatchFailed(StreamId streamId, string topicName, Exception exception);
+}

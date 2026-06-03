@@ -1,5 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <PackageReference Include="Microsoft.Orleans.Sdk" />
+    <PackageReference Include="Confluent.Kafka" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.Orleans.Streaming" />
   </ItemGroup>
 </Project>

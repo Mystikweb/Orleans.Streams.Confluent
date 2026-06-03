@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Contributing guide
+    url: https://github.com/Mystikweb/Orleans.Streams.Confluent/blob/main/CONTRIBUTING.md
+    about: Review issue intake, triage labels, stale policy, and PR expectations.
+  - name: Documentation
+    url: https://github.com/Mystikweb/Orleans.Streams.Confluent/blob/main/README.md
+    about: Start with README and usage examples.
+  - name: Versioning and release policy
+    url: https://github.com/Mystikweb/Orleans.Streams.Confluent/blob/main/VERSIONING.md
+    about: Learn how package versions are produced and published.

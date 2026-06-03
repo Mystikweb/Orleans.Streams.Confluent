@@ -1,0 +1,68 @@
+name: Publish Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Optional package version override. Leave empty to use MinVer from git tags."
+        required: false
+        type: string
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Orleans.Streams.Confluent.slnx --nologo
+
+      - name: Build
+        run: dotnet build Orleans.Streams.Confluent.slnx --configuration Release --no-restore --nologo
+
+      - name: Pack packages
+        shell: bash
+        run: |
+          VERSION_OVERRIDE="${{ github.event.inputs.version }}"
+          EXTRA_ARGS=""
+          if [ -n "$VERSION_OVERRIDE" ]; then
+            EXTRA_ARGS="-p:Version=$VERSION_OVERRIDE"
+            echo "Using override version: $VERSION_OVERRIDE"
+          else
+            echo "Using MinVer-derived version from git history"
+          fi
+
+          dotnet pack src/Orleans.Streams.Confluent/Orleans.Streams.Confluent.csproj --configuration Release --no-build --output ./artifacts --nologo $EXTRA_ARGS
+          dotnet pack src/Orleans.Streams.Confluent.Aspire/Orleans.Streams.Confluent.Aspire.csproj --configuration Release --no-build --output ./artifacts --nologo $EXTRA_ARGS
+          dotnet pack src/Orleans.Streams.Confluent.Aspire.Hosting/Orleans.Streams.Confluent.Aspire.Hosting.csproj --configuration Release --no-build --output ./artifacts --nologo $EXTRA_ARGS
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: artifacts/*.nupkg
+
+      - name: Publish to GitHub Packages
+        run: |
+          dotnet nuget push "artifacts/*.nupkg" \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
+            --skip-duplicate
