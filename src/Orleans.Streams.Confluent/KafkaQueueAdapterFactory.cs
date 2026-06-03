@@ -113,12 +113,6 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
 
     private async Task EnsureTopicAsync()
     {
-        if (!_options.CreateTopicIfMissing)
-        {
-            LogDebugTopicProvisioningSkipped(_providerName, _options.TopicName);
-            return;
-        }
-
         await _initializationLock.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -136,6 +130,12 @@ public sealed partial class KafkaQueueAdapterFactory : IQueueAdapterFactory, IAs
 
                 LogDebugTopicAlreadyExists(_options.TopicName);
                 return;
+            }
+
+            if (!_options.CreateTopicIfMissing)
+            {
+                LogDebugTopicProvisioningSkipped(_providerName, _options.TopicName);
+                throw new InvalidOperationException($"Kafka topic '{_options.TopicName}' does not exist for provider '{_providerName}' and CreateTopicIfMissing is disabled.");
             }
 
             try

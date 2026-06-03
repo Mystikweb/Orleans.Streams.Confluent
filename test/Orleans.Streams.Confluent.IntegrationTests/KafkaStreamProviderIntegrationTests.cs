@@ -189,6 +189,44 @@ public sealed class KafkaStreamProviderIntegrationTests
         messages.Should().BeEmpty();
     }
 
+    [TestMethod]
+    public async Task CreateAdapter_WhenTopicMissingAndAutoProvisioningDisabled_ThrowsInvalidOperationException()
+    {
+        const int partitionCount = 3;
+        var providerName = $"kafka-{Guid.NewGuid():N}";
+        var topicName = $"orders-{Guid.NewGuid():N}";
+
+        await using var kafka = new KafkaBuilder().Build();
+        await kafka.StartAsync();
+
+        using var host = new HostBuilder()
+            .UseOrleans(silo =>
+            {
+                silo.UseLocalhostClustering();
+                silo.Configure<Orleans.Configuration.ClusterOptions>(options =>
+                {
+                    options.ClusterId = Guid.NewGuid().ToString("N");
+                    options.ServiceId = Guid.NewGuid().ToString("N");
+                });
+                silo.AddKafkaStreamProvider(
+                    providerName,
+                    options =>
+                    {
+                        options.BootstrapServers = kafka.GetBootstrapAddress();
+                        options.TopicName = topicName;
+                        options.CreateTopicIfMissing = false;
+                        options.ReplicationFactor = 1;
+                    },
+                    partitionCount);
+            })
+            .Build();
+
+        var factory = CreateFactory(host.Services, providerName);
+
+        var act = () => factory.CreateAdapter();
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
     private static async Task<TopicMetadata> WaitForTopicAsync(IAdminClient adminClient, string topicName, int partitionCount)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);
