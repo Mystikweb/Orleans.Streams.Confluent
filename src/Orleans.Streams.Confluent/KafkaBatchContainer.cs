@@ -80,7 +80,7 @@ public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, 
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(requestContext);
 
-        var container = new KafkaBatchContainer(streamId, [.. events.Cast<object>()], requestContext, topic, partition, offset);
+        var container = new KafkaBatchContainer(streamId, [.. events.Cast<object>()], new Dictionary<string, object>(requestContext), topic, partition, offset);
         return serializer.SerializeToArray(container);
     }
 

@@ -1,13 +1,9 @@
 ﻿using System.Globalization;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Providers.Streams.Common;
-using Orleans.Serialization;
-using Orleans.Streams;
+using Orleans.Streams.Confluent;
 
 namespace Orleans.Streams.Confluent.Aspire;
 
@@ -104,17 +100,10 @@ public static class KafkaStreamProviderAspireExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
         ArgumentNullException.ThrowIfNull(configurationSection);
 
-        RegisterKafkaStreamProvider(
-            builder.Services,
+        return builder.AddKafkaStreamProvider(
             providerName,
             options => ApplyConfiguration(options, configurationSection),
             partitionCount);
-
-        builder.AddPersistentStreams(providerName, CreateQueueAdapterFactory, _ =>
-        {
-        });
-
-        return builder;
     }
 
     /// <summary>
@@ -135,53 +124,15 @@ public static class KafkaStreamProviderAspireExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
         ArgumentNullException.ThrowIfNull(configurationSection);
 
-        RegisterKafkaStreamProvider(
-            builder.Services,
+        return builder.AddKafkaStreamProvider(
             providerName,
             options => ApplyConfiguration(options, configurationSection),
             partitionCount);
-
-        builder.AddPersistentStreams(providerName, CreateQueueAdapterFactory, _ =>
-        {
-        });
-
-        return builder;
     }
 
     private static bool SectionHasValues(IConfigurationSection section)
     {
         return !string.IsNullOrWhiteSpace(section.Value) || section.GetChildren().Any();
-    }
-
-    private static void RegisterKafkaStreamProvider(
-        IServiceCollection services,
-        string providerName,
-        Action<KafkaStreamProviderOptions> configureOptions,
-        int partitionCount)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(partitionCount, 0);
-
-        services.AddOptions<KafkaStreamProviderOptions>(providerName).Configure(options =>
-        {
-            options.PartitionCount = partitionCount;
-            configureOptions.Invoke(options);
-        });
-
-        services.AddOptions<HashRingStreamQueueMapperOptions>(providerName).Configure<IOptionsMonitor<KafkaStreamProviderOptions>>((options, kafkaOptionsMonitor) =>
-        {
-            options.TotalQueueCount = kafkaOptionsMonitor.Get(providerName).PartitionCount;
-        });
-    }
-
-    private static IQueueAdapterFactory CreateQueueAdapterFactory(IServiceProvider serviceProvider, string streamProviderName)
-    {
-        var options = serviceProvider.GetRequiredService<IOptionsMonitor<KafkaStreamProviderOptions>>().Get(streamProviderName);
-        var queueMapperOptions = serviceProvider.GetRequiredService<IOptionsMonitor<HashRingStreamQueueMapperOptions>>().Get(streamProviderName);
-        var cacheOptions = serviceProvider.GetRequiredService<IOptionsMonitor<SimpleQueueCacheOptions>>().Get(streamProviderName);
-        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-        var serializer = serviceProvider.GetRequiredService<Serializer<KafkaBatchContainer>>();
-        var clusterOptions = serviceProvider.GetService<IOptions<ClusterOptions>>()?.Value;
-        return new KafkaQueueAdapterFactory(streamProviderName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer, clusterOptions);
     }
 
     private static void ApplyConfiguration(KafkaStreamProviderOptions options, IConfiguration configuration)
