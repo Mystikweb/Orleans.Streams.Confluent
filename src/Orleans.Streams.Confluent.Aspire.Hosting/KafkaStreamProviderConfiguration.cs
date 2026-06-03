@@ -12,10 +12,10 @@ namespace Orleans.Streams.Confluent.Aspire.Hosting;
 /// </summary>
 internal sealed class KafkaStreamProviderConfiguration(KafkaStreamProviderResourceOptions options) : IProviderConfiguration
 {
-    private readonly ReferenceExpression? _connectionStringExpression;
+    private readonly ReferenceExpression? _bootstrapServersExpression;
 
     internal KafkaStreamProviderConfiguration(
-        ReferenceExpression connectionStringExpression,
+        ReferenceExpression bootstrapServersExpression,
         string topicName,
         int? partitionCount,
         short? replicationFactor,
@@ -29,7 +29,7 @@ internal sealed class KafkaStreamProviderConfiguration(KafkaStreamProviderResour
             CreateTopicIfMissing = createTopicIfMissing
         })
     {
-        _connectionStringExpression = connectionStringExpression;
+        _bootstrapServersExpression = bootstrapServersExpression;
     }
 
     /// <inheritdoc />
@@ -40,9 +40,10 @@ internal sealed class KafkaStreamProviderConfiguration(KafkaStreamProviderResour
         // convention so .NET configuration picks them up under Orleans:Streams:Kafka:{providerName}.
         var prefix = configSectionPath.Replace(":", "__", StringComparison.Ordinal) + "__";
 
-        if (_connectionStringExpression is not null)
+        if (_bootstrapServersExpression is not null)
         {
-            resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.BootstrapServers), _connectionStringExpression);
+            // IResourceWithConnectionString exposes a host:port bootstrap expression, not Kafka key/value connection-string settings.
+            resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.BootstrapServers), _bootstrapServersExpression);
         }
         else if (!string.IsNullOrWhiteSpace(options.ConnectionString))
         {

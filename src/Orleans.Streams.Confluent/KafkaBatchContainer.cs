@@ -39,13 +39,15 @@ public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, 
     /// <inheritdoc />
     public IEnumerable<Tuple<T, StreamSequenceToken>> GetEvents<T>()
     {
-        return Events.OfType<T>().Select((item, index) =>
+        return Events.Select((item, index) => (item, index))
+            .Where(entry => entry.item is T)
+            .Select(entry =>
         {
             var token = SequenceToken is EventSequenceTokenV2 eventToken
-                ? eventToken.CreateSequenceTokenForEvent(index)
+                ? eventToken.CreateSequenceTokenForEvent(entry.index)
                 : SequenceToken;
 
-            return Tuple.Create(item, token);
+            return Tuple.Create((T)entry.item, token);
         });
     }
 
@@ -64,6 +66,14 @@ public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, 
     /// <summary>
     /// Creates a Kafka batch payload from Orleans stream events.
     /// </summary>
+    /// <param name="serializer">The serializer used to encode the batch payload.</param>
+    /// <param name="streamId">The Orleans stream identifier for the batch.</param>
+    /// <param name="events">The event payloads to include in the batch.</param>
+    /// <param name="requestContext">The request context to carry with the batch.</param>
+    /// <param name="topic">The Kafka topic associated with the batch.</param>
+    /// <param name="partition">The Kafka partition associated with the batch.</param>
+    /// <param name="offset">The sequence offset used for the batch token.</param>
+    /// <returns>The serialized Kafka batch payload.</returns>
     public static byte[] ToPayload<T>(Serializer<KafkaBatchContainer> serializer, StreamId streamId, IEnumerable<T> events, Dictionary<string, object> requestContext, string topic, int partition, long offset)
     {
         ArgumentNullException.ThrowIfNull(serializer);

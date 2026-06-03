@@ -21,13 +21,17 @@ public sealed class KafkaBatchContainerTests
             25);
 
         var events = container.GetEvents<string>().ToArray();
+        var allEvents = container.GetEvents<object>().ToArray();
 
         events.Should().HaveCount(2);
+        allEvents.Should().HaveCount(3);
         events[0].Item1.Should().Be("created");
         events[1].Item1.Should().Be("paid");
         events[0].Item2.Should().BeOfType<EventSequenceTokenV2>();
         events[1].Item2.Should().BeOfType<EventSequenceTokenV2>();
         events[0].Item2.Should().NotBe(events[1].Item2);
+        events[0].Item2.CompareTo(allEvents[0].Item2).Should().Be(0);
+        events[1].Item2.CompareTo(allEvents[2].Item2).Should().Be(0);
     }
 
     [TestMethod]
