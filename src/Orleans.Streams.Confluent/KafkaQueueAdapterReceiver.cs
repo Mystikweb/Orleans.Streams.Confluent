@@ -11,27 +11,40 @@ namespace Orleans.Streams.Confluent;
 internal sealed partial class KafkaQueueAdapterReceiver(string providerName, KafkaStreamProviderOptions options, Serializer<KafkaBatchContainer> serializer, ILogger logger, QueueId queueId, string consumerGroupPrefix) : IQueueAdapterReceiver
 {
     private readonly ILogger _logger = logger;
+    private readonly object _consumerSync = new();
     private IConsumer<Ignore, byte[]>? _consumer;
 
     public Task Initialize(TimeSpan timeout)
     {
+        IConsumer<Ignore, byte[]>? consumer = null;
+
         try
         {
-            var queueNumericId = queueId.GetNumericId();
-            var consumerConfig = KafkaClientConfigurationBuilder.CreateConsumerConfig(options, consumerGroupPrefix, queueNumericId);
-            LogDebugInitializingReceiver(queueId, options.TopicName, consumerConfig.GroupId ?? string.Empty);
+            lock (_consumerSync)
+            {
+                var queueNumericId = queueId.GetNumericId();
+                var consumerConfig = KafkaClientConfigurationBuilder.CreateConsumerConfig(options, consumerGroupPrefix, queueNumericId);
+                LogDebugInitializingReceiver(queueId, options.TopicName, consumerConfig.GroupId ?? string.Empty);
 
-            _consumer = new ConsumerBuilder<Ignore, byte[]>(consumerConfig).Build();
-            var topicPartition = new TopicPartition(options.TopicName, new Partition((int)queueNumericId));
-            var startingOffset = ResolveStartingOffset(topicPartition, timeout, consumerConfig.AutoOffsetReset);
-            _consumer.Assign(new TopicPartitionOffset(topicPartition, startingOffset));
-            LogDebugReceiverAssigned(queueId, options.TopicName, queueNumericId);
+                consumer = new ConsumerBuilder<Ignore, byte[]>(consumerConfig).Build();
+                var topicPartition = new TopicPartition(options.TopicName, new Partition((int)queueNumericId));
+                var startingOffset = ResolveStartingOffset(consumer, topicPartition, timeout, consumerConfig.AutoOffsetReset);
+                consumer.Assign(new TopicPartitionOffset(topicPartition, startingOffset));
+                _consumer = consumer;
+                consumer = null;
+
+                LogDebugReceiverAssigned(queueId, options.TopicName, queueNumericId);
+            }
+
             return Task.CompletedTask;
         }
         catch (Exception ex)
         {
-            var consumer = _consumer;
-            _consumer = null;
+            lock (_consumerSync)
+            {
+                consumer ??= _consumer;
+                _consumer = null;
+            }
 
             if (consumer is not null)
             {
@@ -54,40 +67,44 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
 
     public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)
     {
-        if (_consumer is null)
-        {
-            LogDebugReceiverNotInitialized(queueId);
-            return Task.FromResult<IList<IBatchContainer>>([]);
-        }
-
         try
         {
-            var batches = new List<IBatchContainer>(maxCount);
-            while (batches.Count < maxCount)
+            lock (_consumerSync)
             {
-                var result = _consumer.Consume(TimeSpan.FromMilliseconds(50));
-                if (result is null)
+                var consumer = _consumer;
+                if (consumer is null)
                 {
-                    break;
+                    LogDebugReceiverNotInitialized(queueId);
+                    return Task.FromResult<IList<IBatchContainer>>([]);
                 }
 
-                if (result.IsPartitionEOF || result.Message?.Value is null)
+                var batches = new List<IBatchContainer>(maxCount);
+                while (batches.Count < maxCount)
                 {
-                    continue;
+                    var result = consumer.Consume(TimeSpan.FromMilliseconds(50));
+                    if (result is null)
+                    {
+                        break;
+                    }
+
+                    if (result.IsPartitionEOF || result.Message?.Value is null)
+                    {
+                        continue;
+                    }
+
+                    var container = KafkaBatchContainer
+                        .FromPayload(serializer, result.Message.Value)
+                        .WithKafkaMetadata(result.Topic, result.Partition.Value, result.Offset.Value);
+                    batches.Add(container);
                 }
 
-                var container = KafkaBatchContainer
-                    .FromPayload(serializer, result.Message.Value)
-                    .WithKafkaMetadata(result.Topic, result.Partition.Value, result.Offset.Value);
-                batches.Add(container);
-            }
+                if (batches.Count > 0)
+                {
+                    LogDebugMessagesReceived(queueId, batches.Count);
+                }
 
-            if (batches.Count > 0)
-            {
-                LogDebugMessagesReceived(queueId, batches.Count);
+                return Task.FromResult<IList<IBatchContainer>>(batches);
             }
-
-            return Task.FromResult<IList<IBatchContainer>>(batches);
         }
         catch (Exception ex)
         {
@@ -98,31 +115,40 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
 
     public Task MessagesDeliveredAsync(IList<IBatchContainer> messages)
     {
-        if (_consumer is null || messages.Count == 0)
+        if (messages.Count == 0)
         {
             return Task.CompletedTask;
         }
 
         try
         {
-            var commitOffsets = messages
-                .OfType<KafkaBatchContainer>()
-                .GroupBy(batch => new TopicPartition(batch.Topic, new Partition(batch.Partition)))
-                .Select(group =>
-                {
-                    var nextOffset = group.Max(batch => batch.Offset) + 1;
-                    return new TopicPartitionOffset(group.Key, new Offset(nextOffset));
-                })
-                .ToList();
-
-            if (commitOffsets.Count == 0)
+            lock (_consumerSync)
             {
+                var consumer = _consumer;
+                if (consumer is null)
+                {
+                    return Task.CompletedTask;
+                }
+
+                var commitOffsets = messages
+                    .OfType<KafkaBatchContainer>()
+                    .GroupBy(batch => new TopicPartition(batch.Topic, new Partition(batch.Partition)))
+                    .Select(group =>
+                    {
+                        var nextOffset = group.Max(batch => batch.Offset) + 1;
+                        return new TopicPartitionOffset(group.Key, new Offset(nextOffset));
+                    })
+                    .ToList();
+
+                if (commitOffsets.Count == 0)
+                {
+                    return Task.CompletedTask;
+                }
+
+                consumer.Commit(commitOffsets);
+                LogDebugMessagesCommitted(queueId, messages.Count);
                 return Task.CompletedTask;
             }
-
-            _consumer.Commit(commitOffsets);
-            LogDebugMessagesCommitted(queueId, messages.Count);
-            return Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -133,11 +159,18 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
 
     public Task Shutdown(TimeSpan timeout)
     {
+        IConsumer<Ignore, byte[]>? consumer;
+
         try
         {
             LogDebugShuttingDownReceiver(queueId);
-            var consumer = _consumer;
-            _consumer = null;
+
+            lock (_consumerSync)
+            {
+                consumer = _consumer;
+                _consumer = null;
+            }
+
             consumer?.Close();
             consumer?.Dispose();
             return Task.CompletedTask;
@@ -149,15 +182,15 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         }
     }
 
-    private Offset ResolveStartingOffset(TopicPartition topicPartition, TimeSpan timeout, AutoOffsetReset? autoOffsetReset)
+    private Offset ResolveStartingOffset(IConsumer<Ignore, byte[]> consumer, TopicPartition topicPartition, TimeSpan timeout, AutoOffsetReset? autoOffsetReset)
     {
-        var committedOffset = _consumer!.Committed([topicPartition], timeout)[0].Offset;
+        var committedOffset = consumer.Committed([topicPartition], timeout)[0].Offset;
         if (committedOffset.Value >= 0)
         {
             return committedOffset;
         }
 
-        var watermarkOffsets = _consumer.QueryWatermarkOffsets(topicPartition, timeout);
+        var watermarkOffsets = consumer.QueryWatermarkOffsets(topicPartition, timeout);
 
         return autoOffsetReset switch
         {

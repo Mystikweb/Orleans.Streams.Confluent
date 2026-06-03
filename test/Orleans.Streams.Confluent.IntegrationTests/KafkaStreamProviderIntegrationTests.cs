@@ -49,7 +49,7 @@ public sealed class KafkaStreamProviderIntegrationTests
             })
             .Build();
 
-        var factory = CreateFactory(host.Services, providerName);
+        await using var factory = CreateFactory(host.Services, providerName);
         var adapter = await factory.CreateAdapter();
         var serializer = host.Services.GetRequiredService<Serializer<KafkaBatchContainer>>();
         using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = kafka.GetBootstrapAddress() }).Build();
@@ -113,7 +113,7 @@ public sealed class KafkaStreamProviderIntegrationTests
             })
             .Build();
 
-        var factory = CreateFactory(host.Services, providerName);
+        await using var factory = CreateFactory(host.Services, providerName);
         var adapter = await factory.CreateAdapter();
         using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = kafka.GetBootstrapAddress() }).Build();
         var topicMetadata = await WaitForTopicAsync(adminClient, topicName, partitionCount);
@@ -175,7 +175,7 @@ public sealed class KafkaStreamProviderIntegrationTests
             })
             .Build();
 
-        var factory = CreateFactory(host.Services, providerName);
+        await using var factory = CreateFactory(host.Services, providerName);
         var adapter = await factory.CreateAdapter();
         var streamId = StreamId.Create("orders", Guid.NewGuid().ToString("N"));
         var queueId = factory.GetStreamQueueMapper().GetQueueForStream(streamId);
@@ -221,7 +221,7 @@ public sealed class KafkaStreamProviderIntegrationTests
             })
             .Build();
 
-        var factory = CreateFactory(host.Services, providerName);
+        await using var factory = CreateFactory(host.Services, providerName);
 
         var act = () => factory.CreateAdapter();
         await act.Should().ThrowAsync<InvalidOperationException>();
