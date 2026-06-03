@@ -49,6 +49,7 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
     /// <param name="partitionCount">Optional Kafka partition count to configure.</param>
     /// <param name="replicationFactor">Optional Kafka replication factor to configure.</param>
     /// <param name="createTopicIfMissing">Optional flag controlling whether the topic should be created when missing.</param>
+    /// <param name="consumerGroupPrefix">Optional prefix used for generated Kafka consumer group names.</param>
     /// <returns>The updated Orleans service model.</returns>
     public static OrleansService WithKafkaStreamProvider(
         this OrleansService service,
@@ -57,7 +58,8 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
         string topicName,
         int? partitionCount = null,
         short? replicationFactor = null,
-        bool? createTopicIfMissing = null)
+        bool? createTopicIfMissing = null,
+        string? consumerGroupPrefix = null)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(kafkaResource);
@@ -68,7 +70,8 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
             topicName,
             partitionCount,
             replicationFactor,
-            createTopicIfMissing);
+            createTopicIfMissing,
+            consumerGroupPrefix);
     }
 
     /// <summary>
@@ -83,6 +86,7 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
     /// <param name="partitionCount">Optional Kafka partition count to configure.</param>
     /// <param name="replicationFactor">Optional Kafka replication factor to configure.</param>
     /// <param name="createTopicIfMissing">Optional flag controlling whether the topic should be created when missing.</param>
+    /// <param name="consumerGroupPrefix">Optional prefix used for generated Kafka consumer group names.</param>
     /// <returns>The updated Orleans service model.</returns>
     public static OrleansService WithKafkaStreamProvider(
         this OrleansService service,
@@ -91,7 +95,8 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
         string topicName,
         int? partitionCount = null,
         short? replicationFactor = null,
-        bool? createTopicIfMissing = null)
+        bool? createTopicIfMissing = null,
+        string? consumerGroupPrefix = null)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
@@ -106,7 +111,8 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
                 topicName,
                 partitionCount,
                 replicationFactor,
-                createTopicIfMissing));
+                createTopicIfMissing,
+                consumerGroupPrefix));
     }
 
     private static void ValidateTopicProvisioningValues(int? partitionCount, short? replicationFactor)
@@ -134,6 +140,7 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
     /// <param name="partitionCount">Optional Kafka partition count to configure.</param>
     /// <param name="replicationFactor">Optional Kafka replication factor to configure.</param>
     /// <param name="createTopicIfMissing">Optional flag controlling whether the topic should be created when missing.</param>
+    /// <param name="consumerGroupPrefix">Optional prefix used for generated Kafka consumer group names.</param>
     /// <returns>The updated Orleans service model.</returns>
     public static OrleansService WithKafkaStreamProvider(
         this OrleansService service,
@@ -142,7 +149,8 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
         string topicName,
         int? partitionCount = null,
         short? replicationFactor = null,
-        bool? createTopicIfMissing = null)
+        bool? createTopicIfMissing = null,
+        string? consumerGroupPrefix = null)
     {
         return service.WithKafkaStreamProvider(
             providerName,
@@ -152,7 +160,8 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
                 TopicName = topicName,
                 PartitionCount = partitionCount,
                 ReplicationFactor = replicationFactor,
-                CreateTopicIfMissing = createTopicIfMissing
+                CreateTopicIfMissing = createTopicIfMissing,
+                ConsumerGroupPrefix = consumerGroupPrefix
             });
     }
 
@@ -166,6 +175,7 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
     /// <param name="partitionCount">Optional Kafka partition count to configure.</param>
     /// <param name="replicationFactor">Optional Kafka replication factor to configure.</param>
     /// <param name="createTopicIfMissing">Optional flag controlling whether the topic should be created when missing.</param>
+    /// <param name="consumerGroupPrefix">Optional prefix used for generated Kafka consumer group names.</param>
     /// <returns>The updated Orleans service model.</returns>
     public static OrleansService WithKafkaStreamProviderConnectionString(
         this OrleansService service,
@@ -174,7 +184,8 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
         string topicName,
         int? partitionCount = null,
         short? replicationFactor = null,
-        bool? createTopicIfMissing = null)
+        bool? createTopicIfMissing = null,
+        string? consumerGroupPrefix = null)
     {
         return service.WithKafkaStreamProvider(
             providerName,
@@ -184,7 +195,8 @@ public static class KafkaStreamProviderOrleansResourceBuilderExtensions
                 TopicName = topicName,
                 PartitionCount = partitionCount,
                 ReplicationFactor = replicationFactor,
-                CreateTopicIfMissing = createTopicIfMissing
+                CreateTopicIfMissing = createTopicIfMissing,
+                ConsumerGroupPrefix = consumerGroupPrefix
             });
     }
 }

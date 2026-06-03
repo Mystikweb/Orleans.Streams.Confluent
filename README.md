@@ -108,10 +108,13 @@ Silo usage:
 ```csharp
 using Orleans.Streams.Confluent.Aspire;
 
-silo.AddKafkaStreamProviderFromConfiguration(
-    providerName: "kafka",
-    configuration: hostContext.Configuration,
-    sectionPath: "Orleans:Streams:Kafka");
+hostBuilder.UseOrleans((context, silo) =>
+{
+    silo.AddKafkaStreamProviderFromConfiguration(
+        providerName: "kafka",
+        configuration: context.Configuration,
+        sectionPath: "Orleans:Streams:Kafka");
+});
 ```
 
 Client usage:
@@ -119,11 +122,11 @@ Client usage:
 ```csharp
 using Orleans.Streams.Confluent.Aspire;
 
-hostBuilder.UseOrleansClient(client =>
+hostBuilder.UseOrleansClient((context, client) =>
 {
     client.AddKafkaStreamProviderFromConfiguration(
         providerName: "kafka",
-        configuration: hostContext.Configuration);
+    configuration: context.Configuration);
 });
 ```
 
@@ -200,3 +203,4 @@ AppHost emits provider-scoped keys under:
 - `Orleans:Streams:Kafka:{providerName}:PartitionCount`
 - `Orleans:Streams:Kafka:{providerName}:ReplicationFactor`
 - `Orleans:Streams:Kafka:{providerName}:CreateTopicIfMissing`
+- `Orleans:Streams:Kafka:{providerName}:ConsumerGroupPrefix`

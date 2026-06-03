@@ -34,4 +34,9 @@ public sealed class KafkaStreamProviderResourceOptions
     /// Gets or sets a value indicating whether the topic should be created if it does not exist.
     /// </summary>
     public bool? CreateTopicIfMissing { get; init; }
+
+    /// <summary>
+    /// Gets or sets the consumer group prefix used for generated Kafka consumer group names.
+    /// </summary>
+    public string? ConsumerGroupPrefix { get; init; }
 }

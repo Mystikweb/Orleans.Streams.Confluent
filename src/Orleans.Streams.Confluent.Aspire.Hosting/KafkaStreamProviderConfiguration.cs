@@ -19,14 +19,16 @@ internal sealed class KafkaStreamProviderConfiguration(KafkaStreamProviderResour
         string topicName,
         int? partitionCount,
         short? replicationFactor,
-        bool? createTopicIfMissing)
+        bool? createTopicIfMissing,
+        string? consumerGroupPrefix = null)
         : this(new KafkaStreamProviderResourceOptions
         {
             BootstrapServers = string.Empty,
             TopicName = topicName,
             PartitionCount = partitionCount,
             ReplicationFactor = replicationFactor,
-            CreateTopicIfMissing = createTopicIfMissing
+            CreateTopicIfMissing = createTopicIfMissing,
+            ConsumerGroupPrefix = consumerGroupPrefix
         })
     {
         _bootstrapServersExpression = bootstrapServersExpression;
@@ -70,6 +72,11 @@ internal sealed class KafkaStreamProviderConfiguration(KafkaStreamProviderResour
         if (options.CreateTopicIfMissing.HasValue)
         {
             resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.CreateTopicIfMissing), options.CreateTopicIfMissing.Value.ToString());
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.ConsumerGroupPrefix))
+        {
+            resourceBuilder.WithEnvironment(prefix + nameof(KafkaStreamProviderResourceOptions.ConsumerGroupPrefix), options.ConsumerGroupPrefix);
         }
     }
 }
