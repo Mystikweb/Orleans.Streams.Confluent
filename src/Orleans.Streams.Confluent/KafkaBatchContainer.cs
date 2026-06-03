@@ -24,8 +24,7 @@ public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, 
     [Id(2)]
     public Dictionary<string, object> RequestContext { get; } = requestContext ?? throw new ArgumentNullException(nameof(requestContext));
 
-    [field: global::System.NonSerialized]
-    public StreamSequenceToken SequenceToken { get; } = new EventSequenceTokenV2(offset);
+    public StreamSequenceToken SequenceToken => new EventSequenceTokenV2(Offset);
 
     [Id(4)]
     public string Topic { get; } = topic ?? throw new ArgumentNullException(nameof(topic));

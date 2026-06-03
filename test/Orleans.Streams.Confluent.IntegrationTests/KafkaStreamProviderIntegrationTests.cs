@@ -62,7 +62,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         await adapter.QueueMessageBatchAsync(
             streamId,
             new[] { "created" },
-            null!,
+            new EventSequenceTokenV2(42),
             new Dictionary<string, object>());
 
         using var consumer = new ConsumerBuilder<Ignore, byte[]>(new ConsumerConfig
@@ -78,6 +78,8 @@ public sealed class KafkaStreamProviderIntegrationTests
         var batch = KafkaBatchContainer.FromPayload(serializer, consumedMessage.Message.Value);
         batch.Topic.Should().Be(topicName);
         batch.Partition.Should().Be((int)queueId.GetNumericId());
+        batch.SequenceToken.Should().BeOfType<EventSequenceTokenV2>();
+        ((EventSequenceTokenV2)batch.SequenceToken).SequenceNumber.Should().Be(42);
         batch.GetEvents<string>().Select(tuple => tuple.Item1).Should().ContainSingle().Which.Should().Be("created");
     }
 
