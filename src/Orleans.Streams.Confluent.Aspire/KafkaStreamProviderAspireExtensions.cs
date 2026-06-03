@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using System.Globalization;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -203,12 +204,12 @@ public static class KafkaStreamProviderAspireExtensions
             options.TopicName = topicName;
         }
 
-        if (int.TryParse(configuration[nameof(KafkaStreamProviderOptions.PartitionCount)], out var configuredPartitionCount))
+        if (int.TryParse(configuration[nameof(KafkaStreamProviderOptions.PartitionCount)], NumberStyles.Integer, CultureInfo.InvariantCulture, out var configuredPartitionCount))
         {
             options.PartitionCount = configuredPartitionCount;
         }
 
-        if (short.TryParse(configuration[nameof(KafkaStreamProviderOptions.ReplicationFactor)], out var replicationFactor))
+        if (short.TryParse(configuration[nameof(KafkaStreamProviderOptions.ReplicationFactor)], NumberStyles.Integer, CultureInfo.InvariantCulture, out var replicationFactor))
         {
             options.ReplicationFactor = replicationFactor;
         }

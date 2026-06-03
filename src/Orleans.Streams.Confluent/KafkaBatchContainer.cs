@@ -22,7 +22,7 @@ public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, 
     public List<object> Events { get; } = events ?? throw new ArgumentNullException(nameof(events));
 
     [Id(2)]
-    public Dictionary<string, object> RequestContext { get; } = requestContext ?? [];
+    public Dictionary<string, object> RequestContext { get; } = requestContext ?? throw new ArgumentNullException(nameof(requestContext));
 
     [field: NonSerialized]
     public StreamSequenceToken SequenceToken { get; } = new EventSequenceTokenV2(offset);
@@ -78,6 +78,7 @@ public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, 
     {
         ArgumentNullException.ThrowIfNull(serializer);
         ArgumentNullException.ThrowIfNull(events);
+        ArgumentNullException.ThrowIfNull(requestContext);
 
         var container = new KafkaBatchContainer(streamId, [.. events.Cast<object>()], requestContext, topic, partition, offset);
         return serializer.SerializeToArray(container);
