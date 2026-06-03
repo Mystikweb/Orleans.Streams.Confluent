@@ -22,6 +22,7 @@ internal sealed partial class KafkaQueueAdapter(
 {
     private readonly ConcurrentDictionary<QueueId, Lazy<KafkaQueueAdapterReceiver>> _receivers = new();
     private readonly ILogger _logger = loggerFactory.CreateLogger<KafkaQueueAdapter>();
+    private static readonly Dictionary<string, object> EmptyRequestContext = new();
 
     public string Name => providerName;
 
@@ -49,9 +50,7 @@ internal sealed partial class KafkaQueueAdapter(
     public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
     {
         ArgumentNullException.ThrowIfNull(events);
-        var effectiveRequestContext = requestContext is null
-            ? new Dictionary<string, object>()
-            : new Dictionary<string, object>(requestContext);
+        var effectiveRequestContext = requestContext ?? EmptyRequestContext;
 
         try
         {

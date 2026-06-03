@@ -120,6 +120,11 @@ internal static class KafkaClientConfigurationBuilder
             return "sasl.password";
         }
 
+        if (key.Equals("GroupId", StringComparison.OrdinalIgnoreCase))
+        {
+            return "group.id";
+        }
+
         return key;
     }
 }

@@ -17,15 +17,32 @@ namespace Orleans.Streams.Confluent.IntegrationTests;
 [TestClass]
 public sealed class KafkaStreamProviderIntegrationTests
 {
+    private static KafkaContainer? _kafkaContainer;
+
+    [ClassInitialize]
+    public static async Task ClassInitialize(TestContext _)
+    {
+        _kafkaContainer = new KafkaBuilder().Build();
+        await _kafkaContainer.StartAsync();
+    }
+
+    [ClassCleanup]
+    public static async Task ClassCleanup()
+    {
+        if (_kafkaContainer is not null)
+        {
+            await _kafkaContainer.DisposeAsync();
+            _kafkaContainer = null;
+        }
+    }
+
     [TestMethod]
     public async Task AddKafkaStreamProvider_WhenPartitionCountConfigured_CreatesTopicAndPublishesAndReceivesMessages()
     {
         const int partitionCount = 3;
         var providerName = $"kafka-{Guid.NewGuid():N}";
         var topicName = $"orders-{Guid.NewGuid():N}";
-
-        await using var kafka = new KafkaBuilder().Build();
-        await kafka.StartAsync();
+        var bootstrapServers = GetKafkaBootstrapServers();
 
         using var host = new HostBuilder()
             .UseOrleans(silo =>
@@ -40,7 +57,7 @@ public sealed class KafkaStreamProviderIntegrationTests
                     providerName,
                     options =>
                     {
-                        options.BootstrapServers = kafka.GetBootstrapAddress();
+                        options.BootstrapServers = bootstrapServers;
                         options.TopicName = topicName;
                         options.CreateTopicIfMissing = true;
                         options.ReplicationFactor = 1;
@@ -52,7 +69,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         await using var factory = CreateFactory(host.Services, providerName);
         var adapter = await factory.CreateAdapter();
         var serializer = host.Services.GetRequiredService<Serializer<KafkaBatchContainer>>();
-        using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = kafka.GetBootstrapAddress() }).Build();
+        using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrapServers }).Build();
         var topicMetadata = await WaitForTopicAsync(adminClient, topicName, partitionCount);
         topicMetadata.Partitions.Should().HaveCount(partitionCount);
 
@@ -67,7 +84,7 @@ public sealed class KafkaStreamProviderIntegrationTests
 
         using var consumer = new ConsumerBuilder<Ignore, byte[]>(new ConsumerConfig
         {
-            BootstrapServers = kafka.GetBootstrapAddress(),
+            BootstrapServers = bootstrapServers,
             GroupId = $"assert-{Guid.NewGuid():N}",
             AutoOffsetReset = AutoOffsetReset.Earliest,
             AllowAutoCreateTopics = false
@@ -89,9 +106,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         const int partitionCount = 3;
         var providerName = $"kafka-{Guid.NewGuid():N}";
         var topicName = $"orders-{Guid.NewGuid():N}";
-
-        await using var kafka = new KafkaBuilder().Build();
-        await kafka.StartAsync();
+        var bootstrapServers = GetKafkaBootstrapServers();
 
         using var host = new HostBuilder()
             .UseOrleans(silo =>
@@ -106,7 +121,7 @@ public sealed class KafkaStreamProviderIntegrationTests
                     providerName,
                     options =>
                     {
-                        options.BootstrapServers = kafka.GetBootstrapAddress();
+                        options.BootstrapServers = bootstrapServers;
                         options.TopicName = topicName;
                         options.CreateTopicIfMissing = true;
                         options.ReplicationFactor = 1;
@@ -117,7 +132,7 @@ public sealed class KafkaStreamProviderIntegrationTests
 
         await using var factory = CreateFactory(host.Services, providerName);
         var adapter = await factory.CreateAdapter();
-        using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = kafka.GetBootstrapAddress() }).Build();
+        using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrapServers }).Build();
         var topicMetadata = await WaitForTopicAsync(adminClient, topicName, partitionCount);
         topicMetadata.Partitions.Should().HaveCount(partitionCount);
 
@@ -151,9 +166,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         const int partitionCount = 3;
         var providerName = $"kafka-{Guid.NewGuid():N}";
         var topicName = $"orders-{Guid.NewGuid():N}";
-
-        await using var kafka = new KafkaBuilder().Build();
-        await kafka.StartAsync();
+        var bootstrapServers = GetKafkaBootstrapServers();
 
         using var host = new HostBuilder()
             .UseOrleans(silo =>
@@ -168,7 +181,7 @@ public sealed class KafkaStreamProviderIntegrationTests
                     providerName,
                     options =>
                     {
-                        options.BootstrapServers = kafka.GetBootstrapAddress();
+                        options.BootstrapServers = bootstrapServers;
                         options.TopicName = topicName;
                         options.CreateTopicIfMissing = true;
                         options.ReplicationFactor = 1;
@@ -197,9 +210,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         const int partitionCount = 3;
         var providerName = $"kafka-{Guid.NewGuid():N}";
         var topicName = $"orders-{Guid.NewGuid():N}";
-
-        await using var kafka = new KafkaBuilder().Build();
-        await kafka.StartAsync();
+        var bootstrapServers = GetKafkaBootstrapServers();
 
         using var host = new HostBuilder()
             .UseOrleans(silo =>
@@ -214,7 +225,7 @@ public sealed class KafkaStreamProviderIntegrationTests
                     providerName,
                     options =>
                     {
-                        options.BootstrapServers = kafka.GetBootstrapAddress();
+                        options.BootstrapServers = bootstrapServers;
                         options.TopicName = topicName;
                         options.CreateTopicIfMissing = false;
                         options.ReplicationFactor = 1;
@@ -292,5 +303,15 @@ public sealed class KafkaStreamProviderIntegrationTests
         var loggerFactory = serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>();
         var serializer = serviceProvider.GetRequiredService<Serializer<KafkaBatchContainer>>();
         return new KafkaQueueAdapterFactory(providerName, options, queueMapperOptions, cacheOptions, loggerFactory, serializer);
+    }
+
+    private static string GetKafkaBootstrapServers()
+    {
+        if (_kafkaContainer is null)
+        {
+            throw new InvalidOperationException("Kafka test container has not been initialized.");
+        }
+
+        return _kafkaContainer.GetBootstrapAddress();
     }
 }
