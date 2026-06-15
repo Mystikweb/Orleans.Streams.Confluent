@@ -22,7 +22,7 @@ public sealed class KafkaStreamProviderIntegrationTests
     [ClassInitialize]
     public static async Task ClassInitialize(TestContext _)
     {
-        _kafkaContainer = new KafkaBuilder().Build();
+        _kafkaContainer = new KafkaBuilder("confluentinc/cp-kafka:7.5.12").Build();
         await _kafkaContainer.StartAsync();
     }
 
