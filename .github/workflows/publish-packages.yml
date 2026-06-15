@@ -55,7 +55,7 @@ jobs:
           dotnet pack src/Orleans.Streams.Confluent.Aspire.Hosting/Orleans.Streams.Confluent.Aspire.Hosting.csproj --configuration Release --no-build --output ./artifacts --nologo $EXTRA_ARGS
 
       - name: Upload package artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nuget-packages
           path: artifacts/*.nupkg
