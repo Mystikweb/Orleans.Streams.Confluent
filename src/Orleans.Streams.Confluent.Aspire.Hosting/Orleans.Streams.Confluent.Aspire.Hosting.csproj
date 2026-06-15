@@ -2,6 +2,5 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting" />
     <PackageReference Include="Aspire.Hosting.Orleans" />
-    <PackageReference Include="MessagePack" />
   </ItemGroup>
 </Project>
