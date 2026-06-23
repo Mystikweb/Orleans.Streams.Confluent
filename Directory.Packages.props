@@ -5,7 +5,7 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Aspire.Hosting" Version="13.4.4" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.Orleans" Version="13.4.4" />
     <PackageVersion Include="Confluent.Kafka" Version="2.14.2" />
     <PackageVersion Include="FluentAssertions" Version="8.10.0" />
