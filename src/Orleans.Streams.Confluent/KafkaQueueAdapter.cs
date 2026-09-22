@@ -47,7 +47,7 @@ internal sealed partial class KafkaQueueAdapter(
         return _receivers[queueId].Value;
     }
 
-    public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken token, Dictionary<string, object> requestContext)
+    public async Task QueueMessageBatchAsync<T>(StreamId streamId, IEnumerable<T> events, StreamSequenceToken? token, Dictionary<string, object>? requestContext)
     {
         ArgumentNullException.ThrowIfNull(events);
         var effectiveRequestContext = requestContext ?? EmptyRequestContext;

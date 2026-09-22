@@ -148,6 +148,22 @@ public sealed class KafkaStreamProviderIntegrationTests
             new EventSequenceTokenV2(0),
             new Dictionary<string, object>());
 
+        using (var assertionConsumer = new ConsumerBuilder<Ignore, byte[]>(new ConsumerConfig
+        {
+            BootstrapServers = bootstrapServers,
+            GroupId = $"assert-{Guid.NewGuid():N}",
+            AutoOffsetReset = AutoOffsetReset.Earliest,
+            AllowAutoCreateTopics = false
+        }).Build())
+        {
+            assertionConsumer.Assign(new TopicPartition(topicName, new Partition((int)queueId.GetNumericId())));
+            await WaitForKafkaMessageAsync(assertionConsumer);
+        }
+
+        using var readCancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(10));
+        Func<Task> readCanceled = () => receiver.GetQueueMessagesAsync(2, readCancellationTokenSource.Token);
+        await readCanceled.Should().ThrowAsync<OperationCanceledException>();
+
         var messages = await WaitForReceiverMessagesAsync(receiver);
         messages.Should().ContainSingle();
 
@@ -156,7 +172,16 @@ public sealed class KafkaStreamProviderIntegrationTests
         batch.Partition.Should().Be((int)queueId.GetNumericId());
         batch.GetEvents<string>().Select(tuple => tuple.Item1).Should().ContainSingle().Which.Should().Be("created");
 
-        await receiver.MessagesDeliveredAsync(messages);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Func<Task> deliverCanceled = () => receiver.MessagesDeliveredAsync(messages, cancellationTokenSource.Token);
+        await deliverCanceled.Should().ThrowAsync<OperationCanceledException>();
+
+        var replayedMessages = await WaitForReceiverMessagesAsync(receiver);
+        replayedMessages.Should().ContainSingle();
+
+        await receiver.MessagesDeliveredAsync(replayedMessages, CancellationToken.None);
         await receiver.Shutdown(TimeSpan.FromSeconds(5));
     }
 
@@ -200,7 +225,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         await receiver.Initialize(TimeSpan.FromSeconds(5));
         await receiver.Shutdown(TimeSpan.FromSeconds(5));
 
-        var messages = await receiver.GetQueueMessagesAsync(10);
+        var messages = await receiver.GetQueueMessagesAsync(10, CancellationToken.None);
         messages.Should().BeEmpty();
     }
 
@@ -282,7 +307,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         var deadline = DateTime.UtcNow.AddSeconds(15);
         while (DateTime.UtcNow < deadline)
         {
-            var messages = await receiver.GetQueueMessagesAsync(10);
+            var messages = await receiver.GetQueueMessagesAsync(10, CancellationToken.None);
             if (messages.Count > 0)
             {
                 return messages;

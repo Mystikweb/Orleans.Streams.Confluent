@@ -91,7 +91,8 @@ public sealed class KafkaBatchContainer(StreamId streamId, List<object> events, 
         ArgumentNullException.ThrowIfNull(serializer);
         ArgumentNullException.ThrowIfNull(payload);
 
-        return serializer.Deserialize(payload);
+        return serializer.Deserialize(payload)
+            ?? throw new InvalidOperationException("The Kafka batch payload deserialized to null.");
     }
 
     /// <summary>
