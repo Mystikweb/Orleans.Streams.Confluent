@@ -124,6 +124,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
                         LogDebugMessagesReceived(queueId, batches.Count);
                     }
 
+                    cancellationToken.ThrowIfCancellationRequested();
                     return Task.FromResult<IList<IBatchContainer>>(batches);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
