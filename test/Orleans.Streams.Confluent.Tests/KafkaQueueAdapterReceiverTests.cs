@@ -26,8 +26,12 @@ public sealed class KafkaQueueAdapterReceiverTests
         using var cancellationTokenSource = new CancellationTokenSource();
         cancellationTokenSource.Cancel();
         var receiver = CreateReceiver();
+        var messages = new IBatchContainer[]
+        {
+            new KafkaBatchContainer(StreamId.Create("orders", "order-123"), ["created"], [], "orders-topic", 0, 0)
+        };
 
-        Func<Task> act = async () => await receiver.MessagesDeliveredAsync([], cancellationTokenSource.Token);
+        Func<Task> act = async () => await receiver.MessagesDeliveredAsync(messages, cancellationTokenSource.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }

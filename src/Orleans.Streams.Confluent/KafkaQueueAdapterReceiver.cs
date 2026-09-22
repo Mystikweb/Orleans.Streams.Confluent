@@ -91,6 +91,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     var result = consumer.Consume(TimeSpan.FromMilliseconds(50));
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (result is null)
                     {
                         break;
@@ -160,12 +161,11 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
             lock (_consumerSync)
             {
                 consumer = _consumer;
+                cancellationToken.ThrowIfCancellationRequested();
                 if (consumer is null)
                 {
                     return Task.CompletedTask;
                 }
-
-                cancellationToken.ThrowIfCancellationRequested();
 
                 var commitOffsets = messages
                     .OfType<KafkaBatchContainer>()
