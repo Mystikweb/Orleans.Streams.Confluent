@@ -156,7 +156,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         batch.Partition.Should().Be((int)queueId.GetNumericId());
         batch.GetEvents<string>().Select(tuple => tuple.Item1).Should().ContainSingle().Which.Should().Be("created");
 
-        await receiver.MessagesDeliveredAsync(messages);
+        await receiver.MessagesDeliveredAsync(messages, CancellationToken.None);
         await receiver.Shutdown(TimeSpan.FromSeconds(5));
     }
 
@@ -200,7 +200,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         await receiver.Initialize(TimeSpan.FromSeconds(5));
         await receiver.Shutdown(TimeSpan.FromSeconds(5));
 
-        var messages = await receiver.GetQueueMessagesAsync(10);
+        var messages = await receiver.GetQueueMessagesAsync(10, CancellationToken.None);
         messages.Should().BeEmpty();
     }
 
@@ -282,7 +282,7 @@ public sealed class KafkaStreamProviderIntegrationTests
         var deadline = DateTime.UtcNow.AddSeconds(15);
         while (DateTime.UtcNow < deadline)
         {
-            var messages = await receiver.GetQueueMessagesAsync(10);
+            var messages = await receiver.GetQueueMessagesAsync(10, CancellationToken.None);
             if (messages.Count > 0)
             {
                 return messages;
