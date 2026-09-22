@@ -13,6 +13,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
     private readonly ILogger _logger = logger;
     private readonly object _consumerSync = new();
     private IConsumer<Ignore, byte[]>? _consumer;
+    private bool _isFaulted;
 
     public Task Initialize(TimeSpan timeout)
     {
@@ -31,6 +32,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
                 var startingOffset = ResolveStartingOffset(consumer, topicPartition, timeout, consumerConfig.AutoOffsetReset);
                 consumer.Assign(new TopicPartitionOffset(topicPartition, startingOffset));
                 _consumer = consumer;
+                _isFaulted = false;
                 consumer = null;
 
                 LogDebugReceiverAssigned(queueId, options.TopicName, queueNumericId);
@@ -79,6 +81,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
 
             lock (_consumerSync)
             {
+                ThrowIfFaulted();
                 consumer = _consumer;
                 if (consumer is null)
                 {
@@ -168,6 +171,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         {
             lock (_consumerSync)
             {
+                ThrowIfFaulted();
                 consumer = _consumer;
                 try
                 {
@@ -241,6 +245,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         catch (Exception exception)
         {
             _consumer = null;
+            _isFaulted = true;
             restorationFailure = exception;
         }
 
@@ -268,6 +273,14 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         }
 
         throw new InvalidOperationException("Kafka receiver offset restoration failed after cancellation.", restorationFailure);
+    }
+
+    private void ThrowIfFaulted()
+    {
+        if (_isFaulted)
+        {
+            throw new InvalidOperationException("Kafka receiver is faulted and must be reinitialized.");
+        }
     }
 
     public Task Shutdown(TimeSpan timeout)
