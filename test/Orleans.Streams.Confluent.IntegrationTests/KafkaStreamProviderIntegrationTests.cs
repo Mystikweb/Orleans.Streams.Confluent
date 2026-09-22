@@ -156,7 +156,16 @@ public sealed class KafkaStreamProviderIntegrationTests
         batch.Partition.Should().Be((int)queueId.GetNumericId());
         batch.GetEvents<string>().Select(tuple => tuple.Item1).Should().ContainSingle().Which.Should().Be("created");
 
-        await receiver.MessagesDeliveredAsync(messages, CancellationToken.None);
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        Func<Task> deliverCanceled = () => receiver.MessagesDeliveredAsync(messages, cancellationTokenSource.Token);
+        await deliverCanceled.Should().ThrowAsync<OperationCanceledException>();
+
+        var replayedMessages = await WaitForReceiverMessagesAsync(receiver);
+        replayedMessages.Should().ContainSingle();
+
+        await receiver.MessagesDeliveredAsync(replayedMessages, CancellationToken.None);
         await receiver.Shutdown(TimeSpan.FromSeconds(5));
     }
 

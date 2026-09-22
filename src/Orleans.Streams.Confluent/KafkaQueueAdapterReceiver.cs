@@ -70,13 +70,16 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
 
     public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount, CancellationToken cancellationToken)
     {
+        IConsumer<Ignore, byte[]>? consumer = null;
+        var consumedOffsets = new List<TopicPartitionOffset>();
+
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             lock (_consumerSync)
             {
-                var consumer = _consumer;
+                consumer = _consumer;
                 if (consumer is null)
                 {
                     LogDebugReceiverNotInitialized(queueId);
@@ -92,6 +95,15 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
                     {
                         break;
                     }
+
+                    if (!result.IsPartitionEOF)
+                    {
+                        consumedOffsets.Add(new TopicPartitionOffset(
+                            new TopicPartition(result.Topic, result.Partition),
+                            result.Offset));
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
 
                     if (result.IsPartitionEOF || result.Message?.Value is null)
                     {
@@ -114,6 +126,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            TrySeekToOffsets(consumer, consumedOffsets);
             throw;
         }
         catch (Exception ex)
@@ -128,22 +141,31 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
 
     public Task MessagesDeliveredAsync(IList<IBatchContainer> messages, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
         if (messages.Count == 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             return Task.CompletedTask;
         }
+
+        IConsumer<Ignore, byte[]>? consumer = null;
+        var deliveredOffsets = messages
+            .OfType<KafkaBatchContainer>()
+            .Select(batch => new TopicPartitionOffset(
+                new TopicPartition(batch.Topic, new Partition(batch.Partition)),
+                new Offset(batch.Offset)))
+            .ToList();
 
         try
         {
             lock (_consumerSync)
             {
-                var consumer = _consumer;
+                consumer = _consumer;
                 if (consumer is null)
                 {
                     return Task.CompletedTask;
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 var commitOffsets = messages
                     .OfType<KafkaBatchContainer>()
@@ -168,12 +190,42 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            TrySeekToOffsets(consumer, deliveredOffsets);
             throw;
         }
         catch (Exception ex)
         {
             LogErrorCommitFailed(queueId, messages.Count, ex);
             throw;
+        }
+    }
+
+    private void TrySeekToOffsets(IConsumer<Ignore, byte[]>? consumer, IEnumerable<TopicPartitionOffset> offsets)
+    {
+        if (consumer is null)
+        {
+            return;
+        }
+
+        lock (_consumerSync)
+        {
+            if (!ReferenceEquals(_consumer, consumer))
+            {
+                return;
+            }
+
+            try
+            {
+                foreach (var partitionOffsets in offsets.GroupBy(offset => offset.TopicPartition))
+                {
+                    var firstOffset = partitionOffsets.Min(offset => offset.Offset.Value);
+                    consumer.Seek(new TopicPartitionOffset(partitionOffsets.Key, new Offset(firstOffset)));
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Failed to restore Kafka receiver position after cancellation for queue {QueueId}", queueId);
+            }
         }
     }
 
