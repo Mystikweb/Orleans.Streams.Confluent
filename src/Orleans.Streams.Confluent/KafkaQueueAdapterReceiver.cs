@@ -66,9 +66,14 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
     }
 
     public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount)
+        => GetQueueMessagesAsync(maxCount, CancellationToken.None);
+
+    public Task<IList<IBatchContainer>> GetQueueMessagesAsync(int maxCount, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             lock (_consumerSync)
             {
                 var consumer = _consumer;
@@ -81,6 +86,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
                 var batches = new List<IBatchContainer>(maxCount);
                 while (batches.Count < maxCount)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var result = consumer.Consume(TimeSpan.FromMilliseconds(50));
                     if (result is null)
                     {
@@ -106,6 +112,10 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
                 return Task.FromResult<IList<IBatchContainer>>(batches);
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             LogErrorReceivingMessagesFailed(queueId, maxCount, ex);
@@ -114,7 +124,12 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
     }
 
     public Task MessagesDeliveredAsync(IList<IBatchContainer> messages)
+        => MessagesDeliveredAsync(messages, CancellationToken.None);
+
+    public Task MessagesDeliveredAsync(IList<IBatchContainer> messages, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (messages.Count == 0)
         {
             return Task.CompletedTask;
@@ -145,10 +160,15 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
                     return Task.CompletedTask;
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
                 consumer.Commit(commitOffsets);
                 LogDebugMessagesCommitted(queueId, messages.Count);
                 return Task.CompletedTask;
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
