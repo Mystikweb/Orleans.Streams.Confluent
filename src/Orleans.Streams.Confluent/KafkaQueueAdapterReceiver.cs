@@ -127,7 +127,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            TrySeekToOffsets(consumer, consumedOffsets);
+            RestoreOffsetsOrFail(consumer, consumedOffsets);
             throw;
         }
         catch (Exception ex)
@@ -190,7 +190,7 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            TrySeekToOffsets(consumer, deliveredOffsets);
+            RestoreOffsetsOrFail(consumer, deliveredOffsets);
             throw;
         }
         catch (Exception ex)
@@ -200,12 +200,14 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
         }
     }
 
-    private void TrySeekToOffsets(IConsumer<Ignore, byte[]>? consumer, IEnumerable<TopicPartitionOffset> offsets)
+    private void RestoreOffsetsOrFail(IConsumer<Ignore, byte[]>? consumer, IEnumerable<TopicPartitionOffset> offsets)
     {
         if (consumer is null)
         {
             return;
         }
+
+        Exception? restorationFailure = null;
 
         lock (_consumerSync)
         {
@@ -224,9 +226,35 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
             }
             catch (Exception exception)
             {
-                _logger.LogError(exception, "Failed to restore Kafka receiver position after cancellation for queue {QueueId}", queueId);
+                _consumer = null;
+                restorationFailure = exception;
             }
         }
+
+        if (restorationFailure is null)
+        {
+            return;
+        }
+
+        try
+        {
+            consumer.Close();
+        }
+        catch (Exception closeException)
+        {
+            _logger.LogError(closeException, "Failed to close Kafka receiver after offset restoration failed for queue {QueueId}", queueId);
+        }
+
+        try
+        {
+            consumer.Dispose();
+        }
+        catch (Exception disposeException)
+        {
+            _logger.LogError(disposeException, "Failed to dispose Kafka receiver after offset restoration failed for queue {QueueId}", queueId);
+        }
+
+        throw new InvalidOperationException("Kafka receiver offset restoration failed after cancellation.", restorationFailure);
     }
 
     public Task Shutdown(TimeSpan timeout)
