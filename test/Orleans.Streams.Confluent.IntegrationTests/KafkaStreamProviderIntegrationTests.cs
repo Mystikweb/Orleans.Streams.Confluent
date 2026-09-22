@@ -148,6 +148,22 @@ public sealed class KafkaStreamProviderIntegrationTests
             new EventSequenceTokenV2(0),
             new Dictionary<string, object>());
 
+        using (var assertionConsumer = new ConsumerBuilder<Ignore, byte[]>(new ConsumerConfig
+        {
+            BootstrapServers = bootstrapServers,
+            GroupId = $"assert-{Guid.NewGuid():N}",
+            AutoOffsetReset = AutoOffsetReset.Earliest,
+            AllowAutoCreateTopics = false
+        }).Build())
+        {
+            assertionConsumer.Assign(new TopicPartition(topicName, new Partition((int)queueId.GetNumericId())));
+            await WaitForKafkaMessageAsync(assertionConsumer);
+        }
+
+        using var readCancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(10));
+        Func<Task> readCanceled = () => receiver.GetQueueMessagesAsync(2, readCancellationTokenSource.Token);
+        await readCanceled.Should().ThrowAsync<OperationCanceledException>();
+
         var messages = await WaitForReceiverMessagesAsync(receiver);
         messages.Should().ContainSingle();
 

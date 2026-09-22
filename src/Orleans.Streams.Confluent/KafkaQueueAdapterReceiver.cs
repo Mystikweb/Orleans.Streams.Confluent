@@ -86,48 +86,55 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
                     return Task.FromResult<IList<IBatchContainer>>([]);
                 }
 
-                var batches = new List<IBatchContainer>(maxCount);
-                while (batches.Count < maxCount)
+                try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var result = consumer.Consume(TimeSpan.FromMilliseconds(50));
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (result is null)
+                    var batches = new List<IBatchContainer>(maxCount);
+                    while (batches.Count < maxCount)
                     {
-                        break;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var result = consumer.Consume(TimeSpan.FromMilliseconds(50));
+                        if (result is null)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            break;
+                        }
+
+                        if (!result.IsPartitionEOF)
+                        {
+                            consumedOffsets.Add(new TopicPartitionOffset(
+                                new TopicPartition(result.Topic, result.Partition),
+                                result.Offset));
+                        }
+
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        if (result.IsPartitionEOF || result.Message?.Value is null)
+                        {
+                            continue;
+                        }
+
+                        var container = KafkaBatchContainer
+                            .FromPayload(serializer, result.Message.Value)
+                            .WithKafkaMetadata(result.Topic, result.Partition.Value, result.Offset.Value);
+                        batches.Add(container);
                     }
 
-                    if (!result.IsPartitionEOF)
+                    if (batches.Count > 0)
                     {
-                        consumedOffsets.Add(new TopicPartitionOffset(
-                            new TopicPartition(result.Topic, result.Partition),
-                            result.Offset));
+                        LogDebugMessagesReceived(queueId, batches.Count);
                     }
 
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (result.IsPartitionEOF || result.Message?.Value is null)
-                    {
-                        continue;
-                    }
-
-                    var container = KafkaBatchContainer
-                        .FromPayload(serializer, result.Message.Value)
-                        .WithKafkaMetadata(result.Topic, result.Partition.Value, result.Offset.Value);
-                    batches.Add(container);
+                    return Task.FromResult<IList<IBatchContainer>>(batches);
                 }
-
-                if (batches.Count > 0)
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    LogDebugMessagesReceived(queueId, batches.Count);
+                    RestoreOffsetsOrFail(consumer, consumedOffsets);
+                    throw;
                 }
-
-                return Task.FromResult<IList<IBatchContainer>>(batches);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            RestoreOffsetsOrFail(consumer, consumedOffsets);
             throw;
         }
         catch (Exception ex)
@@ -161,36 +168,44 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
             lock (_consumerSync)
             {
                 consumer = _consumer;
-                cancellationToken.ThrowIfCancellationRequested();
-                if (consumer is null)
+                try
                 {
-                    return Task.CompletedTask;
-                }
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                var commitOffsets = messages
-                    .OfType<KafkaBatchContainer>()
-                    .GroupBy(batch => new TopicPartition(batch.Topic, new Partition(batch.Partition)))
-                    .Select(group =>
+                    if (consumer is null)
                     {
-                        var nextOffset = group.Max(batch => batch.Offset) + 1;
-                        return new TopicPartitionOffset(group.Key, new Offset(nextOffset));
-                    })
-                    .ToList();
+                        return Task.CompletedTask;
+                    }
 
-                if (commitOffsets.Count == 0)
-                {
+                    var commitOffsets = messages
+                        .OfType<KafkaBatchContainer>()
+                        .GroupBy(batch => new TopicPartition(batch.Topic, new Partition(batch.Partition)))
+                        .Select(group =>
+                        {
+                            var nextOffset = group.Max(batch => batch.Offset) + 1;
+                            return new TopicPartitionOffset(group.Key, new Offset(nextOffset));
+                        })
+                        .ToList();
+
+                    if (commitOffsets.Count == 0)
+                    {
+                        return Task.CompletedTask;
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    consumer.Commit(commitOffsets);
+                    LogDebugMessagesCommitted(queueId, messages.Count);
                     return Task.CompletedTask;
                 }
-
-                cancellationToken.ThrowIfCancellationRequested();
-                consumer.Commit(commitOffsets);
-                LogDebugMessagesCommitted(queueId, messages.Count);
-                return Task.CompletedTask;
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    RestoreOffsetsOrFail(consumer, deliveredOffsets);
+                    throw;
+                }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            RestoreOffsetsOrFail(consumer, deliveredOffsets);
             throw;
         }
         catch (Exception ex)
@@ -209,26 +224,23 @@ internal sealed partial class KafkaQueueAdapterReceiver(string providerName, Kaf
 
         Exception? restorationFailure = null;
 
-        lock (_consumerSync)
+        if (!ReferenceEquals(_consumer, consumer))
         {
-            if (!ReferenceEquals(_consumer, consumer))
-            {
-                return;
-            }
+            return;
+        }
 
-            try
+        try
+        {
+            foreach (var partitionOffsets in offsets.GroupBy(offset => offset.TopicPartition))
             {
-                foreach (var partitionOffsets in offsets.GroupBy(offset => offset.TopicPartition))
-                {
-                    var firstOffset = partitionOffsets.Min(offset => offset.Offset.Value);
-                    consumer.Seek(new TopicPartitionOffset(partitionOffsets.Key, new Offset(firstOffset)));
-                }
+                var firstOffset = partitionOffsets.Min(offset => offset.Offset.Value);
+                consumer.Seek(new TopicPartitionOffset(partitionOffsets.Key, new Offset(firstOffset)));
             }
-            catch (Exception exception)
-            {
-                _consumer = null;
-                restorationFailure = exception;
-            }
+        }
+        catch (Exception exception)
+        {
+            _consumer = null;
+            restorationFailure = exception;
         }
 
         if (restorationFailure is null)
