@@ -18,7 +18,7 @@
     <PackageVersion Include="Microsoft.Orleans.Server" Version="10.3.1" />
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="10.3.1" />
     <PackageVersion Include="MSTest.TestAdapter" Version="4.3.3" />
-    <PackageVersion Include="MSTest.TestFramework" Version="4.3.3" />
+    <PackageVersion Include="MSTest.TestFramework" Version="4.4.1" />
     <PackageVersion Include="Testcontainers.Kafka" Version="4.15.0" />
   </ItemGroup>
 </Project>
