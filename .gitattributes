@@ -8,6 +8,8 @@
 # Used for files that must keep LF endings, even on Windows.
 ###############################################################################
 *.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
 
 ###############################################################################
 # Set default behavior for command prompt diff.
