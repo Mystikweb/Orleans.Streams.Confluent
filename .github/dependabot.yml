@@ -41,3 +41,10 @@ updates:
     schedule:
       interval: "cron"
       cronjob: "0 9 1,15 * *"
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
